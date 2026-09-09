@@ -1,0 +1,12 @@
+{
+ "measurement": "where workflow-c's 42.6-point gap to perfect actually lives",
+ "model_calls": 0,
+ "gradable_slots": 1372,
+ "correct": 783,
+ "resolved_but_wrong": 359,
+ "unresolved_routed_to_model": 230,
+ "measured_accuracy": 0.5707,
+ "arm_ceiling": 0.7383,
+ "structurally_unreachable": 0.2617,
+ "note": "The model node fires only on fields the deterministic pass failed to answer, so a field answered confidently but wrongly is never revisited. That is a ceiling the arm cannot pass however good the model is, and it is the concrete shape of the agent-versus-workflow tradeoff."
+}

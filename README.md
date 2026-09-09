@@ -123,7 +123,42 @@ It returns the same `CaseRunResult` as the agent runner, so the harness cannot
 tell the two apart. That interchangeability is the fair-comparison guarantee, and
 it means the validity guard applies here too.
 
-**Which surfaced a distinction worth making.** This arm can legitimately consume
+**Run over all 135 primary cases** (no provider configured, so the caption node
+degraded to abstention on every call):
+
+| | |
+|---|---|
+| Numeric accuracy @strict | **0.574** |
+| Abstention accuracy | **0.964** |
+| Cases completed | 135 / 135, 0 errors |
+| Model tokens | 0 — `measurement_kind: deterministic` |
+| Field slots resolved by code | 1,216 of 1,620 (75.1%) |
+| Field slots routed to the model node | 404 (24.9%) |
+
+**And it produced the project's strongest result, with no model involved at all.**
+Of the 404 routed fields, 174 are ones the filer genuinely does not disclose —
+correct abstentions either way — leaving **230 the model node could actually
+win**. That bounds the arm from above:
+
+| Where the gap to perfect lives | Slots | Share |
+|---|---|---|
+| Correct | 783 | 57.1% |
+| **Resolved confidently but wrongly** | **359** | **26.2%** |
+| Unresolved, routed to the model | 230 | 16.8% |
+
+So `workflow-c` has a **hard ceiling of 0.738** — reachable only if the model
+resolved every routed field perfectly — and **26.2 points of its gap are
+structurally unreachable**. The model node fires only on fields the pipeline
+*failed* to answer, so a field it answered confidently and wrongly is never
+revisited, however good the model is.
+
+That is the agent-versus-workflow tradeoff, quantified: **a fixed pipeline can
+fix its misses but not its mistakes.** An agent that can notice a bad answer and
+re-check has no such ceiling — which is the thing worth measuring once the model
+arms run, and the reason the comparison needed both implemented against the same
+tools rather than argued about.
+
+**The arm also surfaced a distinction worth making.** It can legitimately consume
 zero tokens — not because no model was reachable, but because none was needed.
 Those two produce identical tables of zeros and mean opposite things, so
 `measurement_kind` separates four cases:
@@ -546,6 +581,33 @@ named regression test:
   a step could finish and the agent read a workspace digest that omitted what it
   had just produced — the container backend now waits, briefly and boundedly, for
   evidence of the write.
+- **The workflow arm's model node was solving a problem the data does not have.**
+  It was built to disambiguate among candidate statement lines, and over 135
+  cases it routed **zero** fields to the model — the comparison it existed to
+  make was vacuous. Probing the confidence-score distribution explained why: it
+  is bimodal. Of 168 field slots, 155 scored above the confident threshold and
+  the failures scored *negative* (−8, −5, −2) or produced no candidate at all;
+  only 2 landed in the ambiguous middle. A candidate either looks like a
+  statement row or it plainly does not. The real failure is **vocabulary** — the
+  filer used a caption the table lacks — so the node now proposes captions and
+  the deterministic lookup runs again with them.
+- **"The model only supplies captions, so it cannot inject a figure" was false.**
+  A stub model that answered every field with the same caption produced that one
+  figure for `cost_of_revenue`, `operating_income`, `current_assets` and four
+  others — each a real number from the filing, each attributed to the wrong
+  field. Bounding what the model touches is not the same as bounding what it can
+  get wrong. Two guards now stand: a caption must appear verbatim in the filing's
+  own sampled lines, and the requested field must be the *unique* best lexical
+  match.
+- **Two weaker versions of that gate both admit real errors.** Non-zero word
+  overlap accepts a revenue line as cost of revenue, on the shared word
+  "revenue". Counting shared words *ties* them — the caption contains nothing
+  that distinguishes the two — and an accepted tie is a field chosen by
+  dictionary order. Jaccard breaks it by also penalising the words the caption is
+  missing. Relatedly the stopword list is short on purpose: `net` and `current`
+  look like noise and are the only things separating
+  `net_income`/`operating_income` and `current_assets`/`total_assets`. A generic
+  financial stopword list drops both.
 - **A path the host deletes cannot always be recreated by the container.** The
   guest caches directory entries, so clearing a workspace host-side and then
   writing the same filename from inside the sandbox can fail with a

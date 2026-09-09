@@ -62,6 +62,10 @@ class ArmConfig:
     max_steps: int = 14
     allow_paid: bool = False
     prefer_docker: bool = True
+    # When true the arm is executed as a fixed task graph rather than an agent
+    # loop (see evaluation/workflow_arm.py). The harness cannot tell the
+    # difference, which is what makes the comparison fair.
+    deterministic_workflow: bool = False
 
     def policies(self) -> tuple[SlotPolicy, ...]:
         return DEFAULT_POLICIES if self.ledger else NAIVE_POLICIES
@@ -78,6 +82,7 @@ class ArmConfig:
             "window": self.window,
             "max_steps": self.max_steps,
             "allow_paid": self.allow_paid,
+            "deterministic_workflow": self.deterministic_workflow,
         }
 
 
@@ -90,6 +95,9 @@ ARMS: tuple[ArmConfig, ...] = (
     ArmConfig("minus-memory", "no cross-session memory recall", memory=False),
     ArmConfig("minus-compaction", "history never compacted", compaction=False),
     ArmConfig("minus-skills", "no skill bodies, index only", skills=False),
+    ArmConfig("workflow-c",
+              "fixed task graph; the model resolves only the ambiguous fields",
+              deterministic_workflow=True),
     ArmConfig("strong-naked", "paid model, minimal scaffold — architecture vs model",
               ledger=False, memory=False, compaction=False, tool_retrieval=False,
               skills=False, allow_paid=True, max_steps=8),
@@ -115,7 +123,18 @@ class RunnerContext:
 
 
 def make_case_runner(ctx: RunnerContext) -> Callable[[GroundTruthCase, str], CaseRunResult]:
-    """Build the callable the harness drives, closed over shared handles."""
+    """Build the callable the harness drives, closed over shared handles.
+
+    Dispatches on the arm: a deterministic-workflow arm is executed as a task
+    graph, everything else as an agent loop. Both return the same
+    :class:`CaseRunResult`, so the harness scores them identically and the
+    validity guard applies to both.
+    """
+    if ctx.arm.deterministic_workflow:
+        from teamclaw.evaluation.workflow_arm import make_workflow_runner
+
+        return make_workflow_runner(ctx)
+
 
     def run_case(case: GroundTruthCase, level: str) -> CaseRunResult:
         run_id = new_run_id()

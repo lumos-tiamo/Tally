@@ -6,7 +6,6 @@ from teamclaw.context.ledger import (
     ContextLedger,
     LedgerRecord,
     make_bid,
-    utilisation_threshold_reached,
 )
 from teamclaw.context.memory import (
     ConflictPolicy,
@@ -39,7 +38,7 @@ from teamclaw.context.tokenizer import HeuristicCounter, count_tokens, default_c
 __all__ = [
     "CompactionResult", "Compactor",
     "Budget", "BudgetTooSmall", "BuiltContext", "ContextLedger", "LedgerRecord",
-    "make_bid", "utilisation_threshold_reached",
+    "make_bid",
     "ConflictPolicy", "MemoryKind", "MemoryRecord", "MemoryStore", "Recall", "recall_metrics",
     "BM25Retriever", "Doc", "EmbeddingRetriever", "Hit", "HybridRetriever",
     "build_retriever", "tokenize",

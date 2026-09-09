@@ -9,9 +9,15 @@ plumbing check that looks like a 100% accuracy result is worse than no result.
 Less obviously, a run where *no model was reachable at all* produces a table of
 zeros that reads exactly like a real score of zero — the first end-to-end
 invocation of ``teamclaw eval`` with no credentials configured reported
-``valid_measurement: True`` alongside zero tokens and zero steps. So
-:meth:`EvalRun.publishable` requires both no test doubles *and* evidence that
-model calls actually happened.
+``valid_measurement: True`` alongside zero tokens and zero steps.
+
+But "zero tokens" is not always a failure. The ``workflow-c`` arm can legitimately
+resolve a case without ever needing the model, and calling that "nothing was
+evaluated" would be wrong — work happened, it just did not require inference. So
+the two are distinguished: a run with zero tokens *and* errors is unconfigured; a
+run with zero tokens where every case completed cleanly is a valid **deterministic**
+measurement, labelled as such so nobody sets it beside a model arm's number
+without noticing which is which.
 
 **It records the conditions, not just the numbers.** Sandbox isolation level,
 provider mix, arm configuration, dataset digest. A score without its conditions
@@ -107,13 +113,39 @@ class EvalRun:
         return sum(o.run.tokens_total for o in self.outcomes)
 
     @property
-    def publishable(self) -> bool:
-        """A run is a measurement only if a real model actually did the work."""
+    def errored_cases(self) -> int:
+        return sum(1 for o in self.outcomes if o.error)
+
+    @property
+    def model_free_but_complete(self) -> bool:
+        """Zero tokens because the arm did not need a model, not because none ran.
+
+        Every case finished, none errored, and no inference was required — which
+        is a legitimate outcome for a deterministic arm and a meaningless one for
+        an agent arm. Either way it is a different claim from a model-driven
+        score, so it is reported under its own label.
+        """
         return (
             bool(self.outcomes)
-            and not self.used_fake_provider
-            and self.tokens_total > 0
+            and self.tokens_total == 0
+            and self.errored_cases == 0
+            and all(o.finished for o in self.outcomes)
         )
+
+    @property
+    def measurement_kind(self) -> str:
+        if not self.outcomes:
+            return "none"
+        if self.used_fake_provider:
+            return "plumbing"
+        if self.tokens_total > 0:
+            return "model"
+        return "deterministic" if self.model_free_but_complete else "none"
+
+    @property
+    def publishable(self) -> bool:
+        """True when the figures describe something that actually happened."""
+        return self.measurement_kind in {"model", "deterministic"}
 
     def invalidity_reason(self) -> str:
         if not self.outcomes:
@@ -123,13 +155,25 @@ class EvalRun:
                 "a fake/scripted provider served at least one call. These figures "
                 "verify plumbing only and must never be reported as eval results."
             )
-        if self.tokens_total == 0:
+        if self.tokens_total == 0 and not self.model_free_but_complete:
             errors = sorted({o.error.split(":")[0] for o in self.outcomes if o.error})
             detail = f" ({', '.join(errors)})" if errors else ""
             return (
-                "no model tokens were consumed, so nothing was actually evaluated"
+                "no model tokens were consumed and cases did not complete"
                 f"{detail}. A table of zeros here is an unconfigured run, not a "
                 "score of zero."
+            )
+        return ""
+
+    def measurement_note(self) -> str:
+        if not self.publishable:
+            return f"NOT A MEASUREMENT: {self.invalidity_reason()}"
+        if self.measurement_kind == "deterministic":
+            return (
+                "DETERMINISTIC MEASUREMENT: this arm completed every case without "
+                "requiring inference, so the score describes the tooling rather "
+                "than a model. Do not place it beside a model arm's number without "
+                "saying so."
             )
         return ""
 
@@ -168,10 +212,10 @@ class EvalRun:
             ) if self.outcomes else 0.0,
             "recovery_rate": _pooled_recovery(self.outcomes),
             "valid_measurement": self.publishable,
-            "validity_note": (
-                "" if self.publishable
-                else f"NOT A MEASUREMENT: {self.invalidity_reason()}"
-            ),
+            "measurement_kind": self.measurement_kind,
+            "model_calls_made": self.tokens_total > 0,
+            "errored_cases": self.errored_cases,
+            "validity_note": self.measurement_note(),
         }
 
     def to_json(self) -> dict[str, Any]:

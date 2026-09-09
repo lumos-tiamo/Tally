@@ -20,7 +20,7 @@ import math
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Iterable, Protocol, Sequence
+from typing import Protocol, Sequence
 
 _WORD = re.compile(r"[a-z0-9_]+|[一-鿿]")
 
@@ -306,6 +306,3 @@ def build_retriever(prefer_dense: bool = False) -> Retriever:
             pass
     return BM25Retriever()
 
-
-def docs_from(pairs: Iterable[tuple[str, str]]) -> list[Doc]:
-    return [Doc(doc_id=k, text=v) for k, v in pairs]

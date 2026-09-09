@@ -27,6 +27,7 @@ from teamclaw.evaluation.metrics import (
     parse_number,
 )
 from teamclaw.evaluation.runner import ARMS, ARMS_BY_NAME, ArmConfig, RunnerContext, make_case_runner
+from teamclaw.evaluation.workflow_arm import build_graph, make_workflow_runner
 
 __all__ = [
     "CaseOutcome", "CaseRunResult", "EvalRun", "Harness", "dataset_digest",
@@ -36,4 +37,5 @@ __all__ = [
     "MetricResult", "RunMetrics", "abstention_accuracy", "aggregate",
     "calculation_consistency", "citation_verifiability", "numeric_accuracy", "parse_number",
     "ARMS", "ARMS_BY_NAME", "ArmConfig", "RunnerContext", "make_case_runner",
+    "build_graph", "make_workflow_runner",
 ]

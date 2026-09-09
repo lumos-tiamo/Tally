@@ -99,6 +99,45 @@ scoring therefore falls back to keyword matching over prose — requiring two
 distinct keywords, so a passing mention of "cash flow" is not credited as having
 found the divergence.
 
+### `workflow-c` — the autonomy comparison, run
+
+"Autonomous agent" versus "workflow with LLM nodes" is usually argued
+abstractly. The two are only comparable if built against the same tools and
+scored by the same metrics, which is what having a platform is for: `workflow-c`
+is a fixed six-node task graph that shares the corpus, tool modules, four
+metrics and harness with every other arm, and differs only in **who decides the
+next step**.
+
+```
+download → to_text → deterministic_pass → model_pass → assemble → validate
+                     (caption lookup)     (only the
+                                           ambiguous fields)
+```
+
+The model is called at exactly one node, and only for figures the caption lookup
+could not settle confidently. `model_pass` is optional, so a case the table
+resolves entirely still reaches `assemble` — which is why this arm runs with no
+credentials at all.
+
+It returns the same `CaseRunResult` as the agent runner, so the harness cannot
+tell the two apart. That interchangeability is the fair-comparison guarantee, and
+it means the validity guard applies here too.
+
+**Which surfaced a distinction worth making.** This arm can legitimately consume
+zero tokens — not because no model was reachable, but because none was needed.
+Those two produce identical tables of zeros and mean opposite things, so
+`measurement_kind` separates four cases:
+
+| Kind | Meaning | Publishable |
+|---|---|---|
+| `model` | real tokens consumed | yes |
+| `deterministic` | every case completed, no inference required | yes, **labelled as such** |
+| `plumbing` | a test double served a call | no |
+| `none` | zero tokens *and* cases errored — an unconfigured run | no |
+
+A `deterministic` result carries an explicit note not to set it beside a model
+arm's number without saying which is which.
+
 ### Zero-model floor — measured over all 135 primary cases
 
 The document tools driven by a fixed caption table, with **no model calls at
@@ -217,10 +256,12 @@ platform offers rather than a dependency it imposes.
 ### Not yet measured
 
 **The model arms.** No provider credentials are configured in this repository, so
-every arm in `teamclaw ablate` — `full`, `minus-ledger`, `minus-tool-retrieval`,
-`minus-memory`, `minus-compaction`, `minus-skills`, `strong-naked` — is
-implemented and runnable but unrun. Same for the judge's κ calibration, which
-needs both a judge model and a human-labelled set.
+seven of the eight arms in `teamclaw ablate` — `full`, `minus-ledger`,
+`minus-tool-retrieval`, `minus-memory`, `minus-compaction`, `minus-skills`,
+`strong-naked` — are implemented and runnable but unrun. Same for the judge's κ
+calibration, which needs both a judge model and a human-labelled set.
+
+The eighth, `workflow-c`, needs no credentials to run and did (see below).
 
 The harness will not let that gap be papered over. A run is a measurement only if
 no test double served any call **and** real model tokens were consumed:
@@ -485,7 +526,7 @@ src/teamclaw/
   execution/          sandbox, workspace, registry, stubgen, bridge, convergence
   orchestration/      agent loop, actions, checkpoints, HITL, sub-agents, graph
   observability/      spans, token/cost accounting
-  evaluation/         harness, metrics, judge calibration, ablation arms
+  evaluation/         harness, metrics, judge calibration, ablation arms, workflow arm
   scenarios/
     dd_finance/       corpus, concept mapping, ground truth, signals, sandbox tools
     bi_analyst/       SQL over a read-only database
@@ -497,7 +538,7 @@ scripts/build_l3_signals.py
 scripts/arm_context_cost.py
 scripts/tool_retrieval_scaling.py
 results/               measured output, committed
-tests/                 187 tests — 176 offline, 11 container-gated
+tests/                 200 tests — 189 offline, 11 container-gated
 docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```
 
@@ -506,7 +547,7 @@ docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```bash
 uv venv --python 3.13 && uv pip install -e ".[dev]"
 cp .env.example .env          # set TEAMCLAW_SEC_USER_AGENT at minimum
-python -m pytest -q           # 176 offline; 11 more if a sandbox image exists
+python -m pytest -q           # 189 offline; 11 more if a sandbox image exists
 teamclaw doctor
 ```
 

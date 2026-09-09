@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable
 
 from teamclaw.context.retrieval import Doc, Retriever, build_retriever
 
@@ -165,11 +165,6 @@ class SkillLibrary:
 
     def names(self) -> list[str]:
         return sorted(self.skills)
-
-
-def skill_index_stand_in(evicted: Sequence[object], remaining: int) -> None:
-    """Placeholder degrade hook; the agent loop supplies a real one."""
-    return None
 
 
 DEFAULT_SKILLS: tuple[Skill, ...] = (

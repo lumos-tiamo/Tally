@@ -177,23 +177,3 @@ class Tracer:
             except json.JSONDecodeError:
                 break  # truncated tail: everything after is unusable
         return out
-
-
-class NullTracer(Tracer):
-    """Tracer that keeps spans in memory but writes nothing. For unit tests."""
-
-    def __init__(self) -> None:  # noqa: D107
-        self.run_id = "null"
-        self.run_dir = Path(".")
-        self.path = Path(".")
-        self.spans = []
-        self._echo = False
-
-        class _Devnull:
-            closed = True
-
-            def write(self, *_: object) -> None: ...
-            def flush(self) -> None: ...
-            def close(self) -> None: ...
-
-        self._fh = _Devnull()  # type: ignore[assignment]

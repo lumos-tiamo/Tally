@@ -26,7 +26,6 @@ squeeze out the operating contract.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Sequence
 
@@ -55,9 +54,6 @@ class Budget:
     @property
     def available(self) -> int:
         return max(0, self.window - self.max_output - self.safety_margin)
-
-    def scaled(self, window: int) -> "Budget":
-        return Budget(window=window, max_output=self.max_output, safety_margin=self.safety_margin)
 
 
 @dataclass
@@ -313,14 +309,3 @@ def make_bid(
     return SlotBid(policy=ledger.policy_for(name), items=built, degrade=degrade)
 
 
-def utilisation_threshold_reached(record: LedgerRecord, threshold: float = 0.70) -> bool:
-    """Compaction trigger. Checked only at step boundaries, never mid-reasoning."""
-    return record.utilisation >= threshold
-
-
-def pct(numerator: float, denominator: float) -> float:
-    return 0.0 if not denominator else round(100.0 * numerator / denominator, 2)
-
-
-def ceil_div(a: int, b: int) -> int:
-    return int(math.ceil(a / b)) if b else 0

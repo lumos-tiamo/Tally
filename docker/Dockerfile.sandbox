@@ -1,0 +1,18 @@
+# Frozen dependency set: the agent may not install packages.
+FROM python:3.13-slim
+
+RUN groupadd -g 1000 sandbox && useradd -u 1000 -g 1000 -m sandbox
+
+# Pinned so an ablation arm run next week compares against the same environment.
+RUN pip install --no-cache-dir \
+        pandas==2.2.3 \
+        pyarrow==18.1.0 \
+        numpy==2.2.1 \
+        lxml==5.3.0 \
+        beautifulsoup4==4.12.3 \
+    && rm -rf /root/.cache
+
+RUN mkdir -p /workspace /datasets /opt/tools && chown -R 1000:1000 /workspace
+USER 1000:1000
+WORKDIR /workspace
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1

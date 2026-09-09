@@ -4,5 +4,12 @@ __pycache__/
 .env
 .DS_Store
 workspace/
-.cache/
+runs/
+data/cache/
 data/raw/
+data/filings/
+.pytest_cache/
+*.egg-info/
+
+# Measured results are committed under results/; runs/ is scratch.
+!results/

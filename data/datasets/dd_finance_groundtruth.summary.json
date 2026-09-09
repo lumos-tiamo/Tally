@@ -1,0 +1,37 @@
+{
+ "cases_built": 177,
+ "usable": 177,
+ "quarantined": 0,
+ "held_out": 42,
+ "errors": 0,
+ "mean_l1_coverage": 0.8465,
+ "abstention_targets": {
+  "cost_of_revenue": 78,
+  "accounts_receivable": 54,
+  "total_liabilities": 51,
+  "operating_income": 45,
+  "current_assets": 33,
+  "current_liabilities": 33,
+  "capex": 32
+ },
+ "by_sector": {
+  "tech": 27,
+  "retail": 15,
+  "banks": 15,
+  "industrials": 15,
+  "insurance": 12,
+  "pharma": 12,
+  "reit": 12,
+  "utilities": 9,
+  "staples": 9,
+  "consumer": 9,
+  "telecom": 9,
+  "semis": 6,
+  "healthcare": 6,
+  "energy": 6,
+  "transport": 6,
+  "media": 6,
+  "auto": 3
+ },
+ "quarantine_reasons": []
+}

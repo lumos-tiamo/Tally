@@ -1,0 +1,1103 @@
+{
+ "arm": "deterministic-tools-only",
+ "model_calls": 0,
+ "cases_attempted": 135,
+ "cases_scored": 135,
+ "cases_failed": 0,
+ "numeric_accuracy_strict": {
+  "metric": "numeric_accuracy@strict",
+  "rate": 0.5707,
+  "correct": 783,
+  "total": 1372,
+  "cases": 135,
+  "failure_samples": [
+   {
+    "field": "cost_of_revenue",
+    "expected": 106374000000.0,
+    "got": 25017000000.0,
+    "relative_error": 0.76482
+   },
+   {
+    "field": "accounts_receivable",
+    "expected": 80876000000.0,
+    "got": 12737000000.0,
+    "relative_error": 0.842512
+   },
+   {
+    "field": "cash_from_operations",
+    "expected": 182935000000.0,
+    "got": null,
+    "why": "no value produced"
+   },
+   {
+    "field": "capex",
+    "expected": 115948000000.0,
+    "got": null,
+    "why": "no value produced"
+   },
+   {
+    "field": "cost_of_revenue",
+    "expected": 87831000000.0,
+    "got": 22422000000.0,
+    "relative_error": 0.744714
+   },
+   {
+    "field": "accounts_receivable",
+    "expected": 69905000000.0,
+    "got": 10581000000.0,
+    "relative_error": 0.848637
+   },
+   {
+    "field": "cash_from_operations",
+    "expected": 136162000000.0,
+    "got": null,
+    "why": "no value produced"
+   },
+   {
+    "field": "capex",
+    "expected": 64551000000.0,
+    "got": null,
+    "why": "no value produced"
+   }
+  ]
+ },
+ "citation_verifiability": {
+  "metric": "citation_verifiability",
+  "rate": 0.9851,
+  "correct": 1254,
+  "total": 1273,
+  "missing_quote": 0,
+  "quote_not_found": 0,
+  "number_far_from_quote": 19,
+  "too_short": 0,
+  "verified": 1254,
+  "cases": 135,
+  "failure_samples": [
+   {
+    "field": "capex",
+    "why": "quote found but value not near it",
+    "value": 69691000000.0,
+    "quote": "purchases of property and equipment (69,691) (37,256) (27,045) principal payments on finance leases (2,524) (1,969) (1,0"
+   },
+   {
+    "field": "capex",
+    "why": "quote found but value not near it",
+    "value": 37256000000.0,
+    "quote": "purchases of property and equipment (37,256) (27,045) (31,186) principal payments on finance leases (1,969) (1,058) (850"
+   },
+   {
+    "field": "capex",
+    "why": "quote found but value not near it",
+    "value": 27045000000.0,
+    "quote": "purchases of property and equipment, net (27,045) (31,186) (18,567) principal payments on finance leases (1,058) (850) ("
+   },
+   {
+    "field": "accounts_receivable",
+    "why": "quote found but value not near it",
+    "value": 107000000.0,
+    "quote": "receivables, net - 107 inventory - 88 other 14 151 total current assets held for sale 14 356 noncurrent assets held for "
+   },
+   {
+    "field": "capex",
+    "why": "quote found but value not near it",
+    "value": 2206000000.0,
+    "quote": "capital expenditures: buildings, facilities and plant equipment $ (2,206) $ (1,563) aircraft and parts (171) (742) vehic"
+   },
+   {
+    "field": "capex",
+    "why": "quote found but value not near it",
+    "value": 1563000000.0,
+    "quote": "capital expenditures: buildings, facilities and plant equipment $ (1,563) $ (2,211) aircraft and parts (742) (585) vehic"
+   },
+   {
+    "field": "capex",
+    "why": "quote found but value not near it",
+    "value": 2211000000.0,
+    "quote": "capital expenditures: buildings, facilities and plant equipment $ (2,211) $ (1,708) aircraft and parts (585) (1,267) veh"
+   },
+   {
+    "field": "cost_of_revenue",
+    "why": "quote found but value not near it",
+    "value": 2000000.0,
+    "quote": "refinery cost of goods sold (2) 6,259 depreciation and amortization 2,443 113 other segment items (3) 22,840 432 operati"
+   }
+  ]
+ },
+ "abstention_accuracy": {
+  "metric": "abstention_accuracy",
+  "rate": 0.9643,
+  "correct": 81,
+  "total": 84,
+  "correct_abstention": 81,
+  "fabricated": 3,
+  "cases": 135,
+  "failure_samples": [
+   {
+    "field": "cost_of_revenue",
+    "fabricated_value": 160062000000.0,
+    "why": "filer does not disclose this field",
+    "label": "Cost of revenue"
+   },
+   {
+    "field": "cost_of_revenue",
+    "fabricated_value": 42591000000.0,
+    "why": "filer does not disclose this field",
+    "label": "Cost of revenue"
+   },
+   {
+    "field": "cost_of_revenue",
+    "fabricated_value": 52196000000.0,
+    "why": "filer does not disclose this field",
+    "label": "Cost of revenue"
+   }
+  ]
+ },
+ "per_case": [
+  {
+   "case": "AAPL-FY2025",
+   "sector": "tech",
+   "numeric_strict": 1.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "AAPL-FY2024",
+   "sector": "tech",
+   "numeric_strict": 1.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "AAPL-FY2023",
+   "sector": "tech",
+   "numeric_strict": 1.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "MSFT-FY2026",
+   "sector": "tech",
+   "numeric_strict": 0.6667,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "MSFT-FY2025",
+   "sector": "tech",
+   "numeric_strict": 0.6667,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "MSFT-FY2024",
+   "sector": "tech",
+   "numeric_strict": 0.6667,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "GOOGL-FY2025",
+   "sector": "tech",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "GOOGL-FY2024",
+   "sector": "tech",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "GOOGL-FY2023",
+   "sector": "tech",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NVDA-FY2025",
+   "sector": "semis",
+   "numeric_strict": 0.9167,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NVDA-FY2024",
+   "sector": "semis",
+   "numeric_strict": 0.9167,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NVDA-FY2023",
+   "sector": "semis",
+   "numeric_strict": 0.9167,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "AMZN-FY2025",
+   "sector": "retail",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "AMZN-FY2024",
+   "sector": "retail",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "AMZN-FY2023",
+   "sector": "retail",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "META-FY2025",
+   "sector": "tech",
+   "numeric_strict": 1.0,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "META-FY2024",
+   "sector": "tech",
+   "numeric_strict": 1.0,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "META-FY2023",
+   "sector": "tech",
+   "numeric_strict": 0.9167,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "JPM-FY2025",
+   "sector": "banks",
+   "numeric_strict": 0.6667,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "JPM-FY2024",
+   "sector": "banks",
+   "numeric_strict": 0.6667,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "JPM-FY2023",
+   "sector": "banks",
+   "numeric_strict": 0.8333,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "BAC-FY2025",
+   "sector": "banks",
+   "numeric_strict": 0.6667,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "BAC-FY2024",
+   "sector": "banks",
+   "numeric_strict": 0.5,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "BAC-FY2023",
+   "sector": "banks",
+   "numeric_strict": 0.3333,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "WFC-FY2025",
+   "sector": "banks",
+   "numeric_strict": 0.0,
+   "citation": 0.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "WFC-FY2024",
+   "sector": "banks",
+   "numeric_strict": 0.0,
+   "citation": 0.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "WFC-FY2023",
+   "sector": "banks",
+   "numeric_strict": 0.0,
+   "citation": 0.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "GS-FY2025",
+   "sector": "banks",
+   "numeric_strict": 0.5714,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "GS-FY2024",
+   "sector": "banks",
+   "numeric_strict": 0.5714,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "GS-FY2023",
+   "sector": "banks",
+   "numeric_strict": 0.7143,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "BRK-B-FY2025",
+   "sector": "insurance",
+   "numeric_strict": 0.4286,
+   "citation": 1.0,
+   "abstention": 0.6667
+  },
+  {
+   "case": "BRK-B-FY2024",
+   "sector": "insurance",
+   "numeric_strict": 0.4286,
+   "citation": 1.0,
+   "abstention": 0.6667
+  },
+  {
+   "case": "BRK-B-FY2023",
+   "sector": "insurance",
+   "numeric_strict": 0.1429,
+   "citation": 1.0,
+   "abstention": 0.6667
+  },
+  {
+   "case": "PGR-FY2025",
+   "sector": "insurance",
+   "numeric_strict": 0.2857,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "PGR-FY2024",
+   "sector": "insurance",
+   "numeric_strict": 0.2857,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "PGR-FY2023",
+   "sector": "insurance",
+   "numeric_strict": 0.2857,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "AIG-FY2025",
+   "sector": "insurance",
+   "numeric_strict": 0.8333,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "AIG-FY2024",
+   "sector": "insurance",
+   "numeric_strict": 0.5,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "AIG-FY2023",
+   "sector": "insurance",
+   "numeric_strict": 0.2857,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "JNJ-FY2025",
+   "sector": "pharma",
+   "numeric_strict": 0.4545,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "JNJ-FY2024",
+   "sector": "pharma",
+   "numeric_strict": 0.4545,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "JNJ-FY2023",
+   "sector": "pharma",
+   "numeric_strict": 0.4545,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PFE-FY2025",
+   "sector": "pharma",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PFE-FY2024",
+   "sector": "pharma",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PFE-FY2023",
+   "sector": "pharma",
+   "numeric_strict": 0.4545,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "UNH-FY2025",
+   "sector": "healthcare",
+   "numeric_strict": 0.5833,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "UNH-FY2024",
+   "sector": "healthcare",
+   "numeric_strict": 0.5833,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "UNH-FY2023",
+   "sector": "healthcare",
+   "numeric_strict": 0.5833,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CVS-FY2025",
+   "sector": "healthcare",
+   "numeric_strict": 0.8333,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CVS-FY2024",
+   "sector": "healthcare",
+   "numeric_strict": 0.8333,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CVS-FY2023",
+   "sector": "healthcare",
+   "numeric_strict": 0.8333,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "ABBV-FY2025",
+   "sector": "pharma",
+   "numeric_strict": 0.5455,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "ABBV-FY2024",
+   "sector": "pharma",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "ABBV-FY2023",
+   "sector": "pharma",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CVX-FY2025",
+   "sector": "energy",
+   "numeric_strict": 0.5455,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CVX-FY2024",
+   "sector": "energy",
+   "numeric_strict": 0.5455,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CVX-FY2023",
+   "sector": "energy",
+   "numeric_strict": 0.5455,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NEE-FY2025",
+   "sector": "utilities",
+   "numeric_strict": 0.2,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NEE-FY2024",
+   "sector": "utilities",
+   "numeric_strict": 0.3,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NEE-FY2023",
+   "sector": "utilities",
+   "numeric_strict": 0.3,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "DUK-FY2025",
+   "sector": "utilities",
+   "numeric_strict": 0.5,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "DUK-FY2024",
+   "sector": "utilities",
+   "numeric_strict": 0.5,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "DUK-FY2023",
+   "sector": "utilities",
+   "numeric_strict": 0.5,
+   "citation": 0.9091,
+   "abstention": 0.0
+  },
+  {
+   "case": "BA-FY2025",
+   "sector": "industrials",
+   "numeric_strict": 0.6667,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "BA-FY2024",
+   "sector": "industrials",
+   "numeric_strict": 0.5833,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "BA-FY2023",
+   "sector": "industrials",
+   "numeric_strict": 0.5833,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CAT-FY2025",
+   "sector": "industrials",
+   "numeric_strict": 0.5833,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CAT-FY2024",
+   "sector": "industrials",
+   "numeric_strict": 0.5833,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "CAT-FY2023",
+   "sector": "industrials",
+   "numeric_strict": 0.5833,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "GE-FY2025",
+   "sector": "industrials",
+   "numeric_strict": 0.5,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "GE-FY2024",
+   "sector": "industrials",
+   "numeric_strict": 0.5,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "GE-FY2023",
+   "sector": "industrials",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "UPS-FY2025",
+   "sector": "transport",
+   "numeric_strict": 0.7,
+   "citation": 0.9,
+   "abstention": 0.0
+  },
+  {
+   "case": "UPS-FY2024",
+   "sector": "transport",
+   "numeric_strict": 0.6,
+   "citation": 0.9,
+   "abstention": 0.0
+  },
+  {
+   "case": "UPS-FY2023",
+   "sector": "transport",
+   "numeric_strict": 0.6,
+   "citation": 0.9,
+   "abstention": 0.0
+  },
+  {
+   "case": "DAL-FY2025",
+   "sector": "transport",
+   "numeric_strict": 0.7,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "DAL-FY2024",
+   "sector": "transport",
+   "numeric_strict": 0.7,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "DAL-FY2023",
+   "sector": "transport",
+   "numeric_strict": 0.7,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "WMT-FY2025",
+   "sector": "retail",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "WMT-FY2024",
+   "sector": "retail",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "WMT-FY2023",
+   "sector": "retail",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "COST-FY2025",
+   "sector": "retail",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "COST-FY2024",
+   "sector": "retail",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "COST-FY2023",
+   "sector": "retail",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "TGT-FY2025",
+   "sector": "retail",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "TGT-FY2024",
+   "sector": "retail",
+   "numeric_strict": 0.7273,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "TGT-FY2022",
+   "sector": "retail",
+   "numeric_strict": 0.7273,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "KO-FY2025",
+   "sector": "staples",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "KO-FY2024",
+   "sector": "staples",
+   "numeric_strict": 0.7273,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "KO-FY2023",
+   "sector": "staples",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PG-FY2026",
+   "sector": "staples",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PG-FY2025",
+   "sector": "staples",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PG-FY2024",
+   "sector": "staples",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NKE-FY2026",
+   "sector": "consumer",
+   "numeric_strict": 0.8,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NKE-FY2025",
+   "sector": "consumer",
+   "numeric_strict": 0.8,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NKE-FY2024",
+   "sector": "consumer",
+   "numeric_strict": 0.8,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "SBUX-FY2025",
+   "sector": "consumer",
+   "numeric_strict": 0.8182,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "SBUX-FY2024",
+   "sector": "consumer",
+   "numeric_strict": 0.8182,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "SBUX-FY2023",
+   "sector": "consumer",
+   "numeric_strict": 0.7273,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "MCD-FY2025",
+   "sector": "consumer",
+   "numeric_strict": 0.7778,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "MCD-FY2024",
+   "sector": "consumer",
+   "numeric_strict": 0.7778,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "MCD-FY2023",
+   "sector": "consumer",
+   "numeric_strict": 0.7778,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "AMT-FY2025",
+   "sector": "reit",
+   "numeric_strict": 0.6364,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "AMT-FY2024",
+   "sector": "reit",
+   "numeric_strict": 0.5455,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "AMT-FY2023",
+   "sector": "reit",
+   "numeric_strict": 0.4545,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "PLD-FY2025",
+   "sector": "reit",
+   "numeric_strict": 0.5714,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "PLD-FY2024",
+   "sector": "reit",
+   "numeric_strict": 0.5714,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "PLD-FY2023",
+   "sector": "reit",
+   "numeric_strict": 0.7143,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "SPG-FY2025",
+   "sector": "reit",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "SPG-FY2024",
+   "sector": "reit",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "SPG-FY2023",
+   "sector": "reit",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 1.0
+  },
+  {
+   "case": "T-FY2025",
+   "sector": "telecom",
+   "numeric_strict": 0.6,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "T-FY2024",
+   "sector": "telecom",
+   "numeric_strict": 0.6,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "T-FY2023",
+   "sector": "telecom",
+   "numeric_strict": 0.6,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "VZ-FY2025",
+   "sector": "telecom",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "VZ-FY2024",
+   "sector": "telecom",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "VZ-FY2023",
+   "sector": "telecom",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "DIS-FY2025",
+   "sector": "media",
+   "numeric_strict": 0.4,
+   "citation": 0.9091,
+   "abstention": 0.0
+  },
+  {
+   "case": "DIS-FY2024",
+   "sector": "media",
+   "numeric_strict": 0.4,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "DIS-FY2023",
+   "sector": "media",
+   "numeric_strict": 0.4,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "NFLX-FY2025",
+   "sector": "media",
+   "numeric_strict": 1.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NFLX-FY2024",
+   "sector": "media",
+   "numeric_strict": 1.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "NFLX-FY2023",
+   "sector": "media",
+   "numeric_strict": 1.0,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "UBER-FY2025",
+   "sector": "tech",
+   "numeric_strict": 0.0,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "UBER-FY2024",
+   "sector": "tech",
+   "numeric_strict": 0.0,
+   "citation": 0.9167,
+   "abstention": 0.0
+  },
+  {
+   "case": "UBER-FY2023",
+   "sector": "tech",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "SNAP-FY2025",
+   "sector": "tech",
+   "numeric_strict": 0.75,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "SNAP-FY2024",
+   "sector": "tech",
+   "numeric_strict": 0.75,
+   "citation": 0.9,
+   "abstention": 0.0
+  },
+  {
+   "case": "SNAP-FY2023",
+   "sector": "tech",
+   "numeric_strict": 0.6667,
+   "citation": 0.8889,
+   "abstention": 0.0
+  },
+  {
+   "case": "RIVN-FY2025",
+   "sector": "auto",
+   "numeric_strict": 0.0,
+   "citation": 0.9,
+   "abstention": 0.0
+  },
+  {
+   "case": "RIVN-FY2024",
+   "sector": "auto",
+   "numeric_strict": 0.0,
+   "citation": 0.9,
+   "abstention": 0.0
+  },
+  {
+   "case": "RIVN-FY2023",
+   "sector": "auto",
+   "numeric_strict": 0.0,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PLUG-FY2025",
+   "sector": "industrials",
+   "numeric_strict": 0.25,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PLUG-FY2024",
+   "sector": "industrials",
+   "numeric_strict": 0.25,
+   "citation": 1.0,
+   "abstention": 0.0
+  },
+  {
+   "case": "PLUG-FY2023",
+   "sector": "industrials",
+   "numeric_strict": 0.4167,
+   "citation": 1.0,
+   "abstention": 0.0
+  }
+ ],
+ "note": "Zero model calls. This is the floor a language model must beat, and the cheapest regression test for the extraction stack."
+}

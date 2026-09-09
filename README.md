@@ -297,8 +297,24 @@ scripted-provider path scores a perfect 1.000 on a case and is still refused
 `valid_measurement: True` — indistinguishable from a genuine score of zero. There
 is a test named after that one too.
 
-Add a free-tier key to `.env` and `teamclaw ablate --level l1` produces the
-comparison table.
+**To produce them**, either path works and both cost nothing:
+
+```bash
+# A — entirely local. No account, no key. ~5GB model download.
+brew install ollama && ollama serve &
+ollama pull qwen3:8b
+teamclaw doctor                       # ollama should read available=yes
+teamclaw ablate --level l1 --limit 30
+
+# B — free cloud tier. Faster and stronger; needs one signup.
+#     Set any one of these in .env, then the same command:
+#     TEAMCLAW_GEMINI_API_KEY / TEAMCLAW_GLM_API_KEY
+#     TEAMCLAW_GROQ_API_KEY   / TEAMCLAW_CEREBRAS_API_KEY
+teamclaw ablate --level l1 --limit 30
+```
+
+Path A cannot run the `judge`, by design — see the routing table. Everything
+else, including all seven agent arms, runs on the local tier.
 
 ---
 

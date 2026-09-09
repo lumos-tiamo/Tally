@@ -1,0 +1,65 @@
+{
+ "pairs": 118,
+ "companies": 59,
+ "signals_total": 126,
+ "mean_signals_per_pair": 1.068,
+ "quiet_pairs": 46,
+ "quiet_share": 0.39,
+ "by_signal": {
+  "revenue_up_cashflow_down": {
+   "severity": "red_flag",
+   "fired": 14,
+   "detectable": 118,
+   "fire_rate": 0.1186
+  },
+  "receivables_outpacing_revenue": {
+   "severity": "concern",
+   "fired": 17,
+   "detectable": 82,
+   "fire_rate": 0.2073
+  },
+  "margin_compression": {
+   "severity": "concern",
+   "fired": 9,
+   "detectable": 66,
+   "fire_rate": 0.1364
+  },
+  "negative_free_cash_flow": {
+   "severity": "concern",
+   "fired": 15,
+   "detectable": 96,
+   "fire_rate": 0.1562
+  },
+  "revenue_decline": {
+   "severity": "concern",
+   "fired": 4,
+   "detectable": 118,
+   "fire_rate": 0.0339
+  },
+  "operating_loss": {
+   "severity": "red_flag",
+   "fired": 11,
+   "detectable": 88,
+   "fire_rate": 0.125
+  },
+  "liquidity_pressure": {
+   "severity": "watch",
+   "fired": 42,
+   "detectable": 96,
+   "fire_rate": 0.4375
+  },
+  "leverage_increase": {
+   "severity": "watch",
+   "fired": 6,
+   "detectable": 84,
+   "fire_rate": 0.0714
+  },
+  "equity_decline": {
+   "severity": "watch",
+   "fired": 8,
+   "detectable": 118,
+   "fire_rate": 0.0678
+  }
+ },
+ "note": "Quiet pairs are not filler: they are the cases that test whether the agent avoids inventing findings, and they carry no recall denominator by design."
+}

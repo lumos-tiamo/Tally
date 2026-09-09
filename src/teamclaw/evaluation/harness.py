@@ -35,6 +35,7 @@ from teamclaw.evaluation.metrics import (
     calculation_consistency,
     citation_verifiability,
     numeric_accuracy,
+    signal_findings,
 )
 from teamclaw.observability.trace import SpanKind, Tracer
 from teamclaw.orchestration.agent import RunResult
@@ -110,8 +111,12 @@ class EvalRun:
         return names
 
     def headline(self) -> dict[str, Any]:
-        tolerance = L1_HEADLINE_TOLERANCE if self.level == "l1" else L2_HEADLINE_TOLERANCE
-        key = f"numeric_accuracy@{tolerance}"
+        if self.level == "l3":
+            key = "signal_recall"
+        else:
+            tolerance = (L1_HEADLINE_TOLERANCE if self.level == "l1"
+                         else L2_HEADLINE_TOLERANCE)
+            key = f"numeric_accuracy@{tolerance}"
         pooled = {name: self.pooled(name) for name in self.metric_names()}
         return {
             "arm": self.arm,
@@ -180,6 +185,8 @@ def score_case(
     *,
     level: str,
     source_text: str = "",
+    signals_present: Sequence[str] = (),
+    signals_detectable: Sequence[str] = (),
 ) -> dict[str, MetricResult]:
     """Apply the metrics appropriate to the task level."""
     metrics: dict[str, MetricResult] = {}
@@ -203,6 +210,15 @@ def score_case(
         metrics["abstention_accuracy"] = abstention_accuracy(
             predicted, case.l2, absent_keys=undefined
         )
+
+    elif level == "l3":
+        # The objective backbone. The judge grades the prose separately; these
+        # two say whether the agent noticed what the numbers actually show.
+        recall, precision = signal_findings(
+            predicted, signals_present, signals_detectable
+        )
+        metrics["signal_recall"] = recall
+        metrics["signal_precision"] = precision
 
     return metrics
 
@@ -243,6 +259,11 @@ class CaseRunResult:
     providers_used: tuple[str, ...] = ()
     source_text: str = ""
     error: str = ""
+    # L3 only: the cross-year signals present in the data, and those the data
+    # could support at all. The runner computes them because it holds the prior
+    # year's case.
+    signals_present: tuple[str, ...] = ()
+    signals_detectable: tuple[str, ...] = ()
 
 
 class Harness:
@@ -279,7 +300,10 @@ class Harness:
                 )
                 continue
             metrics = score_case(
-                case, result.predicted, level=self.level, source_text=result.source_text
+                case, result.predicted, level=self.level,
+                source_text=result.source_text,
+                signals_present=result.signals_present,
+                signals_detectable=result.signals_detectable,
             )
             out.outcomes.append(
                 CaseOutcome(

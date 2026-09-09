@@ -364,6 +364,41 @@ def l2_objective(ticker: str, fiscal_year: int) -> str:
     )
 
 
+def l3_objective(ticker: str, fiscal_year: int, prior_year: int) -> str:
+    """The judgement task: what do two years of figures actually show?
+
+    Deliberately does *not* enumerate the signal taxonomy. Handing the agent the
+    list of things to look for would turn an analysis task into a checklist, and
+    the metric would then measure whether it can fill in a form. The signals are
+    scoring machinery, not part of the prompt.
+    """
+    return (
+        f"Compare {ticker} fiscal year {fiscal_year} against fiscal year {prior_year} "
+        f"using both annual reports, and report what the figures show.\n\n"
+        "Extract the figures you need, compute the changes in code, and then write "
+        "the analysis. For each finding, give:\n"
+        '  - `observation`: what changed, with both years\' numbers\n'
+        '  - `evidence`: the computed change, and the fields it came from\n'
+        '  - `question`: what a diligence reader should ask about it\n'
+        '  - `severity`: "watch", "concern" or "red_flag"\n\n'
+        "Report only what the numbers support. If the two years show nothing "
+        "material, say so plainly — an invented concern is worse than a short "
+        "report, and a list of every possible worry is not analysis.\n\n"
+        "Write the result to `workspace/l3.json` as "
+        '`{"findings": [...], "summary": "<two or three sentences>"}` and then '
+        "reply DONE."
+    )
+
+
+def signal_ground_truth(
+    current_l1: dict[str, float | None], prior_l1: dict[str, float | None]
+) -> tuple[list[str], list[str]]:
+    """(present, detectable) signal keys for one year-over-year comparison."""
+    from teamclaw.scenarios.dd_finance.signals import detect, detectable
+
+    return [s.key for s in detect(current_l1, prior_l1)], detectable(current_l1, prior_l1)
+
+
 def build_spec(
     *,
     tools: ToolRegistry,
@@ -398,7 +433,7 @@ def parse_output(workspace: Workspace, level: str) -> dict[str, Any]:
     is not machine-checkable, and the whole point of the file contract is that
     the result can be verified without a second model reading it.
     """
-    name = "l1.json" if level == "l1" else "l2.json"
+    name = {"l1": "l1.json", "l2": "l2.json", "l3": "l3.json"}.get(level, "l1.json")
     if not workspace.exists(name):
         return {}
     try:
@@ -407,5 +442,9 @@ def parse_output(workspace: Workspace, level: str) -> dict[str, Any]:
         return {}
     if not isinstance(data, dict):
         return {}
+    if level == "l3":
+        # L3 output is prose plus findings, not a fixed key set, so it is passed
+        # through whole; the signal metrics read it structurally and by keyword.
+        return data
     valid_keys = set(L1_KEYS if level == "l1" else L2_KEYS)
     return {k: v for k, v in data.items() if k in valid_keys}

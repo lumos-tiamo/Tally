@@ -30,7 +30,9 @@ from teamclaw.scenarios.dd_finance.spec import (
     build_tools,
     l1_objective,
     l2_objective,
+    l3_objective,
     parse_output,
+    signal_ground_truth,
 )
 
 
@@ -106,6 +108,10 @@ class RunnerContext:
     arm: ArmConfig
     echo: bool = False
     providers_seen: set[str] = field(default_factory=set)
+    # case_id -> GroundTruthCase for the prior fiscal year. L3 compares two years,
+    # so the runner needs the predecessor to build both the objective and the
+    # signal ground truth.
+    prior_cases: dict[str, object] = field(default_factory=dict)
 
 
 def make_case_runner(ctx: RunnerContext) -> Callable[[GroundTruthCase, str], CaseRunResult]:
@@ -143,10 +149,18 @@ def make_case_runner(ctx: RunnerContext) -> Callable[[GroundTruthCase, str], Cas
             spec.compaction_threshold = 10.0   # unreachable: never compact
         memory = MemoryStore(agent="dd-analyst") if ctx.arm.memory else MemoryStore(agent="none")
 
-        objective = (
-            l1_objective(case.ticker, case.fiscal_year) if level == "l1"
-            else l2_objective(case.ticker, case.fiscal_year)
-        )
+        prior = ctx.prior_cases.get(case.case_id)
+        if level == "l3":
+            if prior is None:
+                return CaseRunResult(
+                    predicted={}, run=RunMetrics(), finished=False,
+                    error="no prior fiscal year in the corpus; L3 needs two years",
+                )
+            objective = l3_objective(case.ticker, case.fiscal_year, prior.fiscal_year)
+        elif level == "l2":
+            objective = l2_objective(case.ticker, case.fiscal_year)
+        else:
+            objective = l1_objective(case.ticker, case.fiscal_year)
 
         agent = Agent(
             spec, router=router, workspace=workspace, tracer=tracer,
@@ -189,9 +203,16 @@ def make_case_runner(ctx: RunnerContext) -> Callable[[GroundTruthCase, str], Cas
         )
         tracer.close()
 
+        signals_present: tuple[str, ...] = ()
+        signals_detectable: tuple[str, ...] = ()
+        if level == "l3" and prior is not None:
+            present, able = signal_ground_truth(case.l1, prior.l1)
+            signals_present, signals_detectable = tuple(present), tuple(able)
+
         return CaseRunResult(
             predicted=predicted, run=metrics, finished=run.finished,
             providers_used=tuple(sorted(providers)), source_text=source_text, error=error,
+            signals_present=signals_present, signals_detectable=signals_detectable,
         )
 
     return run_case

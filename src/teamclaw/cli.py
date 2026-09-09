@@ -214,12 +214,31 @@ def baseline(limit: Optional[int] = typer.Option(None, help="Only the first N ca
 
 # --- eval -----------------------------------------------------------------
 def _load_cases(level: str, limit: int | None, held_out: bool):  # noqa: ANN202
+    """Cases for a level, plus the prior-year map that L3 needs.
+
+    L3 compares two fiscal years, so a case is only usable if its predecessor is
+    in the corpus. Returning the map alongside the cases keeps that dependency
+    explicit rather than having the runner rediscover it per case.
+    """
     from teamclaw.scenarios.dd_finance.groundtruth import load_dataset
 
-    cases = [c for c in load_dataset(_dataset_path()) if c.held_out == held_out]
-    if level == "l2":
+    everything = load_dataset(_dataset_path())
+    cases = [c for c in everything if c.held_out == held_out]
+
+    priors: dict[str, object] = {}
+    if level == "l3":
+        by_ticker: dict[str, list] = {}
+        for case in everything:
+            by_ticker.setdefault(case.ticker, []).append(case)
+        for group in by_ticker.values():
+            group.sort(key=lambda c: c.fiscal_year)
+            for previous, current in zip(group, group[1:]):
+                priors[current.case_id] = previous
+        cases = [c for c in cases if c.case_id in priors]
+    elif level == "l2":
         cases = [c for c in cases if any(v is not None for v in c.l2.values())]
-    return cases[:limit] if limit else cases
+
+    return (cases[:limit] if limit else cases), priors
 
 
 @app.command()
@@ -240,7 +259,7 @@ def eval(  # noqa: A001 - the command really is called eval
     if arm not in ARMS_BY_NAME:
         raise typer.BadParameter(f"unknown arm {arm!r}; known: {sorted(ARMS_BY_NAME)}")
     config = ARMS_BY_NAME[arm]
-    cases = _load_cases(level, limit, held_out)
+    cases, priors = _load_cases(level, limit, held_out)
     if not cases:
         console.print("[red]no cases[/red] — run `teamclaw dataset build` first")
         raise typer.Exit(1)
@@ -249,7 +268,7 @@ def eval(  # noqa: A001 - the command really is called eval
     context = RunnerContext(
         registry=registry, client=SecClient(cfg=cfg),
         runs_root=cfg.paths.runs / arm, workspaces_root=cfg.paths.workspaces / arm,
-        arm=config, echo=echo,
+        arm=config, echo=echo, prior_cases=priors,
     )
     harness = Harness(
         cases, arm=arm, level=level,
@@ -286,7 +305,7 @@ def ablate(
 
     cfg = settings()
     selected = ([ARMS_BY_NAME[a.strip()] for a in arms.split(",")] if arms else list(ARMS))
-    cases = _load_cases(level, limit, held_out=False)
+    cases, priors = _load_cases(level, limit, held_out=False)
     if not cases:
         console.print("[red]no cases[/red] — run `teamclaw dataset build` first")
         raise typer.Exit(1)
@@ -299,6 +318,7 @@ def ablate(
             registry=registry, client=SecClient(cfg=cfg),
             runs_root=cfg.paths.runs / config.name,
             workspaces_root=cfg.paths.workspaces / config.name, arm=config,
+            prior_cases=priors,
         )
         result = Harness(cases, arm=config.name, level=level,
                          conditions={"arm": config.to_json()}).run(
@@ -306,15 +326,17 @@ def ablate(
         result.save(cfg.paths.runs / f"eval_{config.name}_{level}.json")
         rows.append(result.headline())
 
-    table = Table("arm", "headline", "citations", "consistency", "abstention",
+    second = ("signal_precision" if level == "l3" else "citation_verifiability")
+    third = ("correctly_silent" if level == "l3" else "calculation_consistency")
+    table = Table("arm", "headline", second, third, "abstention",
                   "tokens", "cost", "steps", "valid", title=f"Ablation — level {level}")
     for row in rows:
         metrics = row["metrics"]
         table.add_row(
             row["arm"],
             f"{row['headline_rate']:.4f}" if row["headline_rate"] is not None else "-",
-            f"{metrics.get('citation_verifiability', 0):.4f}",
-            f"{metrics.get('calculation_consistency', 0):.4f}",
+            f"{metrics.get(second, 0):.4f}",
+            f"{metrics.get(third, 0):.4f}" if third in metrics else "-",
             f"{metrics.get('abstention_accuracy', 0):.4f}",
             f"{row['tokens_total']:,}", f"${row['cost_usd']:.4f}",
             str(row["mean_steps"]),
@@ -348,14 +370,18 @@ def run(
         raise typer.Exit(1)
 
     config = ARMS_BY_NAME[arm]
+    _, priors = _load_cases(level, None, held_out=case.held_out)
     context = RunnerContext(
         registry=build_registry(cfg, include_paid=config.allow_paid),
         client=SecClient(cfg=cfg), runs_root=cfg.paths.runs / "single",
         workspaces_root=cfg.paths.workspaces / "single", arm=config, echo=True,
+        prior_cases=priors,
     )
     result = make_case_runner(context)(case, level)
     metrics = score_case(case, result.predicted, level=level,
-                         source_text=result.source_text)
+                         source_text=result.source_text,
+                         signals_present=result.signals_present,
+                         signals_detectable=result.signals_detectable)
 
     table = Table("metric", "rate", "correct", "total", title=case_id)
     for name, metric in metrics.items():

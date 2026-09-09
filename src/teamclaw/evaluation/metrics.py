@@ -33,6 +33,7 @@ measurement and the reader deserves to see the denominator.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 import unicodedata
@@ -132,13 +133,27 @@ class MetricResult:
     failures: list[dict[str, Any]] = field(default_factory=list)
 
     @property
+    def applicable(self) -> bool:
+        """False when there was nothing to grade.
+
+        Worth surfacing rather than hiding behind a rate of 0.0. A case where the
+        figures show no material signal and the agent correctly reports none has
+        an *undefined* recall, not a recall of zero — and reading 0.00 as failure
+        would invert the interpretation of the best possible outcome. Pooling is
+        unaffected either way: 0/0 contributes to neither numerator nor
+        denominator under micro-averaging.
+        """
+        return self.total > 0
+
+    @property
     def rate(self) -> float:
         return round(self.correct / self.total, 4) if self.total else 0.0
 
     def to_json(self) -> dict[str, Any]:
         return {
             "metric": self.name,
-            "rate": self.rate,
+            "rate": self.rate if self.applicable else None,
+            "applicable": self.applicable,
             "correct": self.correct,
             "total": self.total,
             **self.detail,
@@ -362,6 +377,99 @@ def abstention_accuracy(
 
     result.detail.update(counters)
     return result
+
+
+# --- 5. signal recall (the L3 objective backbone) ------------------------
+def signal_findings(
+    predicted: dict[str, Any],
+    present_keys: Sequence[str],
+    detectable_keys: Sequence[str],
+) -> tuple[MetricResult, MetricResult]:
+    """Score L3 findings against the cross-year signals actually in the data.
+
+    Returns ``(recall, precision)`` as separate results, because they answer
+    different questions and an agent can be pathological in either direction:
+    one that lists every possible concern scores perfect recall, and one that
+    reports nothing scores perfect precision.
+
+    ``detectable_keys`` is what makes this fair. A signal whose inputs the filer
+    never disclosed could not have been found, so it is excluded from the recall
+    denominator — otherwise a bank case penalises the agent for not reporting a
+    current ratio it has no way to compute. And a *false* signal is only counted
+    against precision when it was detectable and absent; asserting something
+    uncomputable is scored as a fabrication either way.
+    """
+    reported = _reported_signal_keys(predicted)
+    present = set(present_keys)
+    detectable = set(detectable_keys)
+
+    recall = MetricResult("signal_recall")
+    for key in sorted(present & detectable):
+        recall.total += 1
+        if key in reported:
+            recall.correct += 1
+        else:
+            recall.failures.append({"signal": key, "why": "present in the data but not reported"})
+
+    precision = MetricResult("signal_precision")
+    for key in sorted(reported):
+        precision.total += 1
+        if key in present:
+            precision.correct += 1
+        else:
+            precision.failures.append({
+                "signal": key,
+                "why": "reported but not supported by the figures",
+                "detectable": key in detectable,
+            })
+
+    detail = {"present": len(present & detectable), "reported": len(reported),
+              "detectable": len(detectable)}
+    # A case with nothing material to find, where the agent found nothing, is the
+    # best possible outcome and has no rate. Recording it explicitly means the
+    # pooled report can say how often the agent stayed correctly silent instead
+    # of that fact vanishing into an empty denominator.
+    detail["correctly_silent"] = int(not (present & detectable) and not reported)
+    detail["fabricated_on_quiet_case"] = int(not (present & detectable) and bool(reported))
+    recall.detail = dict(detail)
+    precision.detail = dict(detail)
+    return recall, precision
+
+
+def _reported_signal_keys(predicted: dict[str, Any]) -> set[str]:
+    """Extract signal keys from an L3 answer, by key or by prose keyword.
+
+    Accepts the structured form first — ``{"findings": [{"signal": "...", ...}]}``
+    — and falls back to keyword matching over free text. The fallback exists
+    because a weak model often writes the right observation without using the
+    key, and scoring that as a miss would measure format compliance rather than
+    analysis.
+    """
+    from teamclaw.scenarios.dd_finance.signals import SIGNALS, SIGNALS_BY_KEY
+
+    keys: set[str] = set()
+
+    findings = predicted.get("findings")
+    if isinstance(findings, list):
+        for entry in findings:
+            if isinstance(entry, dict):
+                key = str(entry.get("signal") or entry.get("key") or "")
+                if key in SIGNALS_BY_KEY:
+                    keys.add(key)
+
+    blob = normalise_text(json.dumps(predicted, ensure_ascii=False, default=str))
+    for definition in SIGNALS:
+        if definition.key in keys:
+            continue
+        if normalise_text(definition.key.replace("_", " ")) in blob:
+            keys.add(definition.key)
+            continue
+        # Two distinct keywords, so a passing mention of "cash flow" in an
+        # unrelated sentence does not count as having found the divergence.
+        hits = sum(1 for kw in definition.keywords if normalise_text(kw) in blob)
+        if hits >= 2:
+            keys.add(definition.key)
+    return keys
 
 
 # --- trace-level metrics --------------------------------------------------

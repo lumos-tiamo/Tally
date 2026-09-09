@@ -15,7 +15,7 @@ teamclaw scenarios    # cost of adding a scenario
 teamclaw tools        # tool-representation token costs
 teamclaw dataset build && teamclaw dataset stats
 teamclaw baseline     # the zero-model floor
-teamclaw eval --arm full --level l1
+teamclaw eval --arm full --level l1     # or --level l2 / l3
 teamclaw ablate --level l1
 ```
 
@@ -45,6 +45,59 @@ insurance cases have no current/non-current split, 78 cases have no
 cost-of-revenue line at all. Those absences are the entire test of *abstention* —
 a model that invents a current ratio for a bank is hallucinating, and a corpus of
 large-cap tech filers would never reveal it.
+
+### L3 judgement ground truth — built, 118 year-over-year pairs
+
+L3 is the judgement level: what do two years of figures actually show? The
+obvious way to score it is an LLM judge, and a judge alone would be weak — it
+cannot separate "wrote persuasively" from "noticed the right thing", and its own
+reliability has to be established before its scores mean anything.
+
+So L3 gets an **objective backbone**. A large part of what makes a diligence
+finding correct is derivable: if revenue rose while operating cash flow fell,
+that is a fact about the numbers. Nine such signals are computed from consecutive
+years of L1 truth, each with a materiality threshold so ordinary noise does not
+trigger it, and findings are scored for **recall** (did the agent notice what is
+there) and **precision** (did it assert what is not). The judge then grades only
+what genuinely needs judgement.
+
+| | |
+|---|---|
+| Year-over-year pairs | **118** across 59 companies |
+| Signals detected | 126, mean 1.07 per pair |
+| **Quiet pairs (nothing material)** | **46 — 39%** |
+
+| Signal | Severity | Fired | Detectable | Rate |
+|---|---|---|---|---|
+| liquidity_pressure | watch | 42 | 96 | 43.8% |
+| receivables_outpacing_revenue | concern | 17 | 82 | 20.7% |
+| negative_free_cash_flow | concern | 15 | 96 | 15.6% |
+| revenue_up_cashflow_down | **red flag** | 14 | 118 | 11.9% |
+| operating_loss | **red flag** | 11 | 88 | 12.5% |
+| margin_compression | concern | 9 | 66 | 13.6% |
+| equity_decline | watch | 8 | 118 | 6.8% |
+| leverage_increase | watch | 6 | 84 | 7.1% |
+| revenue_decline | concern | 4 | 118 | 3.4% |
+
+The signal-dense cases are the ones that should be — PLUG (6 signals), RIVN (5),
+Boeing (4) — and `detectable` varies by filer, so a bank is never penalised for
+failing to report a current ratio it cannot compute.
+
+Two design choices carry most of the weight here:
+
+**The 39% quiet pairs are not filler.** They are the cases that test whether the
+agent avoids inventing findings, and they carry no recall denominator by design —
+a quiet case answered quietly has an *undefined* recall, not a recall of zero.
+Reading 0.00 as failure would invert the interpretation of the best possible
+outcome, so `MetricResult.applicable` says so and the pooled report counts
+`correctly_silent` and `fabricated_on_quiet_case` separately.
+
+**The prompt never names the signals.** Handing the agent the taxonomy would turn
+analysis into filling in a form, and the metric would measure format compliance.
+There is a test asserting the prompt contains none of the signal keys, and
+scoring therefore falls back to keyword matching over prose — requiring two
+distinct keywords, so a passing mention of "cash flow" is not credited as having
+found the divergence.
 
 ### Zero-model floor — measured over all 135 primary cases
 
@@ -325,18 +378,20 @@ from reading a filing into calling the oracle.
 
 Four metrics, each for a failure the others cannot see:
 
-| Metric | Catches |
-|---|---|
-| Numeric accuracy (3 tolerance bands) | wrong values; bands separate rounding from nonsense |
-| **Citation verifiability** | a correct number that was guessed — the quote is not in the source |
-| **Calculation consistency** | right inputs with broken arithmetic, *and* clean arithmetic over invented inputs |
-| **Abstention accuracy** | inventing a figure the filer never disclosed |
+| Metric | Level | Catches |
+|---|---|---|
+| Numeric accuracy (3 tolerance bands) | L1, L2 | wrong values; bands separate rounding from nonsense |
+| **Citation verifiability** | L1 | a correct number that was guessed — the quote is not in the source |
+| **Calculation consistency** | L2 | right inputs with broken arithmetic, *and* clean arithmetic over invented inputs |
+| **Abstention accuracy** | L1, L2 | inventing a figure the filer never disclosed |
+| **Signal recall / precision** | L3 | missing what the figures show, and asserting what they do not |
 
-For L3 judgement tasks there is no XBRL answer, so an LLM judge scores a rubric —
+For the judgement layer the LLM judge grades a rubric on top of that backbone,
 and its **Cohen's κ against human labels is reported per dimension**, with
 dimensions below κ=0.6 withheld from the headline and flagged for human
 spot-checks. A judge that does not agree with humans is not evidence about the
-agent.
+agent. Both plain and quadratic-weighted κ are reported, since a judge scoring 4
+where a human scored 5 is not the same error as scoring 1.
 
 ---
 
@@ -415,16 +470,17 @@ src/teamclaw/
   observability/      spans, token/cost accounting
   evaluation/         harness, metrics, judge calibration, ablation arms
   scenarios/
-    dd_finance/       corpus, concept mapping, ground truth, sandbox tools
+    dd_finance/       corpus, concept mapping, ground truth, signals, sandbox tools
     bi_analyst/       SQL over a read-only database
     deep_research/    provenance-enforcing note store
     code_engineer/    repo edits verified by the test suite
 docker/Dockerfile.sandbox
 scripts/deterministic_baseline.py
+scripts/build_l3_signals.py
 scripts/arm_context_cost.py
 scripts/tool_retrieval_scaling.py
 results/               measured output, committed
-tests/                 162 tests — 151 offline, 11 container-gated
+tests/                 181 tests — 170 offline, 11 container-gated
 docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```
 
@@ -433,7 +489,7 @@ docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```bash
 uv venv --python 3.13 && uv pip install -e ".[dev]"
 cp .env.example .env          # set TEAMCLAW_SEC_USER_AGENT at minimum
-python -m pytest -q           # 151 offline; 11 more if a sandbox image exists
+python -m pytest -q           # 170 offline; 11 more if a sandbox image exists
 teamclaw doctor
 ```
 

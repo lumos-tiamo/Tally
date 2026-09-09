@@ -429,6 +429,41 @@ def run(
 
 
 @app.command()
+def serve(
+    host: Optional[str] = typer.Option(None, help="Bind address. Defaults to 127.0.0.1."),
+    port: Optional[int] = typer.Option(None, help="Port. Defaults to 8000."),
+    seed: bool = typer.Option(True, help="Create one agent per scenario if the database is empty."),
+    reload: bool = typer.Option(False, help="Reload on code change (development)."),
+) -> None:
+    """Serve the API and the console.
+
+    Binds to localhost by default. This server starts containers and runs
+    generated code, so exposing it needs a token — and it refuses to do so
+    quietly: an unauthenticated bind beyond localhost prints a warning at
+    startup and shows up in /api/insight/health.
+    """
+    import uvicorn
+
+    from teamclaw.api import create_app
+
+    cfg = settings()
+    bind_host = host or cfg.api_host
+    bind_port = port or cfg.api_port
+
+    for warning in cfg.api_security_warnings():
+        console.print(f"[yellow]warning[/yellow] {warning}")
+
+    # Seeding is a create_app argument, not a startup hook: @app.on_event does
+    # not fire when a lifespan is supplied, so the hook form silently did nothing.
+    application = create_app(cfg=cfg, seed=seed)
+
+    console.print(f"console  [bold]http://{bind_host}:{bind_port}/[/bold]")
+    console.print(f"api docs [bold]http://{bind_host}:{bind_port}/docs[/bold]")
+    uvicorn.run(application, host=bind_host, port=bind_port, reload=reload,
+                log_level="warning")
+
+
+@app.command()
 def version() -> None:
     """Print the version."""
     console.print(__version__)

@@ -13,3 +13,4 @@ data/filings/
 
 # Measured results are committed under results/; runs/ is scratch.
 !results/
+.gstack/

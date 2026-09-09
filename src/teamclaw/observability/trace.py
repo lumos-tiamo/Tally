@@ -9,6 +9,10 @@ Design notes
 * ``attrs`` is free-form but a handful of keys are conventional and consumed by
   the reporting layer: ``model``, ``provider``, ``tokens_in``, ``tokens_out``,
   ``cost_usd``, ``slots`` (context ledger breakdown), ``exit_code``.
+* Subscribers can receive spans as they close (:meth:`Tracer.subscribe`), which
+  is how the API streams a run over a WebSocket. A subscriber that raises is
+  dropped rather than allowed to break the run — a browser disconnecting must
+  not fail an agent.
 """
 
 from __future__ import annotations
@@ -21,7 +25,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 
 class SpanKind(str, Enum):
@@ -96,6 +100,31 @@ class Tracer:
         self.spans: list[Span] = []
         self._echo = echo
         self._fh = self.path.open("a", encoding="utf-8")
+        self._subscribers: list[Callable[[dict[str, Any]], None]] = []
+
+    # -- live subscription -------------------------------------------------
+    def subscribe(self, callback: Callable[[dict[str, Any]], None]) -> Callable[[], None]:
+        """Receive each span as it closes. Returns an unsubscribe callable.
+
+        Used by the API to stream a run to a browser. Delivery is synchronous and
+        best-effort: a callback that raises is removed and the run continues, so a
+        closed WebSocket cannot take down an agent mid-step.
+        """
+        self._subscribers.append(callback)
+
+        def _unsubscribe() -> None:
+            if callback in self._subscribers:
+                self._subscribers.remove(callback)
+
+        return _unsubscribe
+
+    def _notify(self, payload: dict[str, Any]) -> None:
+        for callback in list(self._subscribers):
+            try:
+                callback(payload)
+            except Exception:  # noqa: BLE001 - a bad subscriber is dropped, not fatal
+                if callback in self._subscribers:
+                    self._subscribers.remove(callback)
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -131,12 +160,14 @@ class Tracer:
 
     def _write(self, sp: Span) -> None:
         self.spans.append(sp)
+        payload = sp.to_json()
         if not self._fh.closed:
-            self._fh.write(json.dumps(sp.to_json(), ensure_ascii=False) + "\n")
+            self._fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
             self._fh.flush()
         if self._echo:
             mark = "!" if sp.error else " "
             print(f"[trace]{mark}{sp.kind.value:>14} {sp.name} ({sp.duration_s:.2f}s)")
+        self._notify(payload)
 
     # -- queries -----------------------------------------------------------
     def of_kind(self, kind: SpanKind) -> list[Span]:

@@ -10,6 +10,7 @@ design — if a strong paid model produced the numbers, the question would be
 unanswerable.
 
 ```
+teamclaw serve        # the console and the API on localhost:8000
 teamclaw doctor       # what is configured and reachable
 teamclaw scenarios    # cost of adding a scenario
 teamclaw tools        # tool-representation token costs
@@ -273,7 +274,7 @@ end-to-end through the same `Agent` class.
 | `code_engineer` | 158 | 162 | 320 | **0** |
 
 Light scenarios: **mean 288 lines, range 240–320, zero runtime changes.** The
-platform runtime is 5,673 lines; the eval harness 1,608; the tests 2,078.
+platform runtime is 5,614 lines; the eval harness 1,758; the serving layer 2,199; the console 985; the tests 2,834.
 
 The four scenarios are deliberately *heterogeneous*, because a platform running
 one scenario is an application with a plugin folder:
@@ -352,6 +353,93 @@ Path A cannot run the `judge`, by design — see the routing table. Everything
 else, including all seven agent arms, runs on the local tier.
 
 ---
+
+## The console
+
+`teamclaw serve` puts the platform behind FastAPI and serves an operator console
+at `/`. It exists for one reason: **the context-engineering work is the hardest
+part of this system to explain in a sentence and the easiest to show.**
+
+The centrepiece is the per-step allocation panel — one bar per prompt, live over
+a WebSocket as each step is built, showing which slot got what and what it
+dropped. "Slot bidding with hard floors" stops being a claim and becomes
+something you point at.
+
+Two design notes worth stating, because both were corrected by looking at it:
+
+**Composition and pressure are separate visual channels.** The first version
+sized each slot against the whole budget. That is arithmetically right and
+useless — at 4% utilisation the entire composition collapses into a four-pixel
+sliver, so the one thing the chart exists to show is invisible exactly when the
+budget is comfortable. Composition is now normalised to what the prompt actually
+used, and budget pressure gets its own thin track underneath.
+
+**No build step and no framework.** The rest of this project runs offline with no
+credentials; a dashboard that needed `npm install` to render would be the one
+part nobody could start. It is one HTML file, one stylesheet and one script,
+served by the app.
+
+Beyond the allocation panel:
+
+| View | What it is for |
+|---|---|
+| Overview | what this deployment ran, and the repository's measured figures |
+| Agents | create and edit declarations; grant A2A delegation per pair |
+| Console | give an agent an objective, watch the allocation and the trace live |
+| Runs | inspect any past run: allocation, trace, workspace artefacts |
+| Needs a human | the HITL queue — approve, deny, or send guidance |
+| Measurements | the tool-cost curve, the ablation arms, the gap decomposition |
+
+### The serving layer
+
+```
+FastAPI  28 endpoints + a WebSocket per run
+         reads open, mutations behind a token, webhooks behind a platform signature
+Store    SQLAlchemy: agent declarations, A2A relations, conversations, run records
+         a run row points at its workspace and trace; it never copies them
+Session  Redis when reachable, process memory when not, and it says which and why
+Channels inbound webhooks — verification and idempotency are enforced by the route,
+         so no adapter can forget them
+```
+
+Three decisions carry most of it.
+
+**The agent loop is synchronous and the API is not.** Runs execute on a bounded
+thread pool and communicate back through per-run queues; the tracer's
+subscription hands each span to the event loop with `call_soon_threadsafe`. A
+browser closing a tab drops events rather than failing an agent. Cancellation is
+cooperative and says so — a thread holding a container cannot be killed safely,
+so cancel takes effect at the next step boundary and the response tells you that
+instead of implying it already happened.
+
+**A run row is an index, not a copy.** The database answers "which agents exist
+and what happened"; the filesystem answers "what does this run know". Storing run
+state in both would make resume a merge rather than a re-read, which is the
+property the whole workspace design exists to preserve.
+
+**Inbound webhooks are verified and deduplicated by the route, not the adapter.**
+Anyone who learns the URL can otherwise make an agent run, and every channel
+redelivers on a slow 200 — which an agent run always is. Doing both once, in the
+route, means no adapter can omit them.
+
+### A2A authorisation
+
+`AgentStore.may_delegate` is the entire permission model, and it takes no tenant
+argument at all:
+
+```python
+store.may_delegate(source_id, target_id, need_files=False) -> Denial
+```
+
+- **Absence is denial.** An unlisted pair is refused; there is no default-allow
+  path and no wildcard.
+- **The tenant is a column on the stored relation**, so a caller cannot authorise
+  a cross-tenant delegation by asserting a tenant.
+- **Grants are directional**, file transfer is a separate permission, a disabled
+  target is refused, and self-delegation is refused before anything else — an
+  agent that can delegate to itself recurses without bound.
+- Refusals name which condition failed, and `POST /api/a2a/check` exposes the
+  same decision so it can be inspected outside a run.
 
 ## How it works
 
@@ -630,18 +718,23 @@ src/teamclaw/
   orchestration/      agent loop, actions, checkpoints, HITL, sub-agents, graph
   observability/      spans, token/cost accounting
   evaluation/         harness, metrics, judge calibration, ablation arms, workflow arm
+  api/                FastAPI routes, WebSocket run feed, run manager
+  store/              SQLAlchemy schema, repository, A2A authorisation
+  session/            Redis with an honest in-memory fallback
+  channels/           inbound webhook adapters (Feishu)
   scenarios/
     dd_finance/       corpus, concept mapping, ground truth, signals, sandbox tools
     bi_analyst/       SQL over a read-only database
     deep_research/    provenance-enforcing note store
     code_engineer/    repo edits verified by the test suite
+web/                   the console: one html, one css, one js — no build step
 docker/Dockerfile.sandbox
 scripts/deterministic_baseline.py
 scripts/build_l3_signals.py
 scripts/arm_context_cost.py
 scripts/tool_retrieval_scaling.py
 results/               measured output, committed
-tests/                 200 tests — 189 offline, 11 container-gated
+tests/                 284 tests — 273 offline, 11 container-gated
 docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```
 
@@ -650,7 +743,7 @@ docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```bash
 uv venv --python 3.13 && uv pip install -e ".[dev]"
 cp .env.example .env          # set TEAMCLAW_SEC_USER_AGENT at minimum
-python -m pytest -q           # 189 offline; 11 more if a sandbox image exists
+python -m pytest -q           # 273 offline; 11 more if a sandbox image exists
 teamclaw doctor
 ```
 
@@ -660,5 +753,6 @@ to disk, which is a correctness property rather than an optimisation: filings ge
 amended, and an eval re-run next week must score against the corpus it was built
 from.
 
-Optional: `docker build -t teamclaw-sandbox:latest -f docker/Dockerfile.sandbox docker/`
+Optional: `docker build -t teamclaw-sandbox:latest -f web/                   the console: one html, one css, one js — no build step
+docker/Dockerfile.sandbox docker/`
 for container isolation, and `ollama pull qwen3:8b` for local extraction.

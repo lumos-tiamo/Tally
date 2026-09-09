@@ -62,6 +62,25 @@ class Settings:
     ollama_base_url: str = "http://localhost:11434"
     allow_paid: bool = False
 
+    # -- serving layer -----------------------------------------------------
+    redis_url: str = ""
+    # When set, every mutating API call and every channel webhook must present
+    # it. Left empty the server binds to localhost only and says so at startup —
+    # an unauthenticated agent platform that can execute code should not be
+    # reachable from a network by accident.
+    api_token: str = ""
+    api_host: str = "127.0.0.1"
+    api_port: int = 8000
+    api_workers: int = 1
+
+    # -- channels ----------------------------------------------------------
+    feishu_app_id: str = ""
+    feishu_app_secret: str = ""
+    feishu_verification_token: str = ""
+    feishu_encrypt_key: str = ""
+    slack_signing_secret: str = ""
+    slack_bot_token: str = ""
+
     # provider credentials; empty string means "not configured"
     gemini_key: str = ""
     glm_key: str = ""
@@ -80,6 +99,17 @@ class Settings:
             sec_user_agent=_env("TEAMCLAW_SEC_USER_AGENT"),
             ollama_base_url=_env("TEAMCLAW_OLLAMA_BASE_URL", "http://localhost:11434"),
             allow_paid=_flag("TEAMCLAW_ALLOW_PAID", False),
+            redis_url=_env("TEAMCLAW_REDIS_URL"),
+            api_token=_env("TEAMCLAW_API_TOKEN"),
+            api_host=_env("TEAMCLAW_API_HOST", "127.0.0.1"),
+            api_port=int(_env("TEAMCLAW_API_PORT", "8000") or 8000),
+            api_workers=int(_env("TEAMCLAW_API_WORKERS", "1") or 1),
+            feishu_app_id=_env("TEAMCLAW_FEISHU_APP_ID"),
+            feishu_app_secret=_env("TEAMCLAW_FEISHU_APP_SECRET"),
+            feishu_verification_token=_env("TEAMCLAW_FEISHU_VERIFICATION_TOKEN"),
+            feishu_encrypt_key=_env("TEAMCLAW_FEISHU_ENCRYPT_KEY"),
+            slack_signing_secret=_env("TEAMCLAW_SLACK_SIGNING_SECRET"),
+            slack_bot_token=_env("TEAMCLAW_SLACK_BOT_TOKEN"),
             gemini_key=_env("TEAMCLAW_GEMINI_API_KEY"),
             glm_key=_env("TEAMCLAW_GLM_API_KEY"),
             groq_key=_env("TEAMCLAW_GROQ_API_KEY"),
@@ -89,6 +119,34 @@ class Settings:
             strong_base_url=_env("TEAMCLAW_STRONG_BASE_URL"),
             strong_model=_env("TEAMCLAW_STRONG_MODEL"),
         )
+
+    @property
+    def exposed_beyond_localhost(self) -> bool:
+        return self.api_host not in {"127.0.0.1", "localhost", "::1"}
+
+    def api_security_warnings(self) -> list[str]:
+        """Refuse to be quietly insecure.
+
+        This server can start containers and run generated code. Binding it to a
+        routable address without a token is the one configuration that turns that
+        into a remote code execution service, so it is called out loudly rather
+        than left in a README.
+        """
+        warnings: list[str] = []
+        if self.exposed_beyond_localhost and not self.api_token:
+            warnings.append(
+                f"API is bound to {self.api_host} with no TEAMCLAW_API_TOKEN set. "
+                "This server executes generated code in a sandbox; reachable and "
+                "unauthenticated is remote code execution. Set a token or bind to "
+                "127.0.0.1."
+            )
+        if self.api_workers > 1 and not self.redis_url:
+            warnings.append(
+                f"api_workers={self.api_workers} with no TEAMCLAW_REDIS_URL. "
+                "Session state would fall back to per-process memory and silently "
+                "not be shared between workers."
+            )
+        return warnings
 
     def require_sec_user_agent(self) -> str:
         """SEC blocks unidentified traffic; fail loudly rather than get 403s."""

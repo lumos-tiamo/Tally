@@ -253,6 +253,22 @@ one scenario is an application with a plugin folder:
 Two scenarios need no host bridge at all, which shows the bridge is an option the
 platform offers rather than a dependency it imposes.
 
+### Delivered against the design, and what is not
+
+The design doc is `docs/superpowers/specs/2026-09-09-agent-platform-design.md`.
+All 26 capabilities it specifies are implemented, all six roadmap stages are
+landed, and all eight ablation arms exist. One thing it promised is **not** here:
+
+**A-share Chinese annual reports.** Stage 5 named them as cross-language
+generalisation evidence. The pieces that would need custom work are in place and
+verified — the retrieval layer tokenises and ranks CJK correctly (character
+unigrams plus IDF, with a Chinese stopword list), and the concept-mapping layer
+is source-agnostic — but no A-share corpus is wired up. Unlike SEC, there is no
+official structured API, so the ground truth would need a different acquisition
+path and a different validation strategy than the XBRL identity check that
+underpins the current 177 cases. Half-building it would have produced a corpus I
+could not vouch for, which is worse than not having one.
+
 ### Not yet measured
 
 **The model arms.** No provider credentials are configured in this repository, so

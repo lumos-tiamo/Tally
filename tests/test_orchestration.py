@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from teamclaw.context.compactor import Compactor
-from teamclaw.context.slots import Item
-from teamclaw.context.tokenizer import count_tokens
-from teamclaw.evaluation.harness import CaseOutcome, EvalRun
-from teamclaw.evaluation.metrics import RunMetrics
-from teamclaw.orchestration.graph import CyclicGraph, TaskGraph, UnknownDependency
-from teamclaw.orchestration.subagent import DelegationDepthExceeded, SubAgentFactory
+from tally.context.compactor import Compactor
+from tally.context.slots import Item
+from tally.context.tokenizer import count_tokens
+from tally.evaluation.harness import CaseOutcome, EvalRun
+from tally.evaluation.metrics import RunMetrics
+from tally.orchestration.graph import CyclicGraph, TaskGraph, UnknownDependency
+from tally.orchestration.subagent import DelegationDepthExceeded, SubAgentFactory
 
 
 # --- task graph -----------------------------------------------------------
@@ -67,7 +67,7 @@ def test_a_subagent_returns_a_digest_not_its_transcript(
     agent_spec, scripted, workspace, tracer, tmp_path
 ):
     """Delegation must reduce context pressure, not relocate it."""
-    from teamclaw.orchestration.agent import Agent
+    from tally.orchestration.agent import Agent
 
     router, _ = scripted([
         "```python\nopen('extract.json','w').write('{\"revenue\": 1}')\nprint('wrote it')\n```",
@@ -88,7 +88,7 @@ def test_a_subagent_returns_a_digest_not_its_transcript(
 def test_a_subagent_gets_a_separate_memory_by_default(
     agent_spec, scripted, workspace, tracer, tmp_path
 ):
-    from teamclaw.orchestration.agent import Agent
+    from tally.orchestration.agent import Agent
 
     router, _ = scripted(["DONE\nnothing"], tracer=tracer, loop_last=True)
     parent = Agent(agent_spec, router=router, workspace=workspace, tracer=tracer,
@@ -100,7 +100,7 @@ def test_a_subagent_gets_a_separate_memory_by_default(
 
 
 def test_delegation_depth_is_capped(agent_spec, scripted, workspace, tracer, tmp_path):
-    from teamclaw.orchestration.agent import Agent
+    from tally.orchestration.agent import Agent
 
     router, _ = scripted(["DONE\nx"], tracer=tracer, loop_last=True)
     parent = Agent(agent_spec, router=router, workspace=workspace, tracer=tracer,
@@ -113,7 +113,7 @@ def test_delegation_depth_is_capped(agent_spec, scripted, workspace, tracer, tmp
 def test_subagent_cost_is_attributed_separately(
     agent_spec, scripted, workspace, tracer, tmp_path
 ):
-    from teamclaw.orchestration.agent import Agent
+    from tally.orchestration.agent import Agent
 
     router, _ = scripted(["DONE\nx"], tracer=tracer, loop_last=True)
     parent = Agent(agent_spec, router=router, workspace=workspace, tracer=tracer,

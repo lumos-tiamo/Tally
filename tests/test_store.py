@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from teamclaw.store import (
+from tally.store import (
     AgentStore,
     RunState,
     SchemaTooNew,
@@ -20,7 +20,7 @@ from teamclaw.store import (
     init_schema,
     seed_default_agents,
 )
-from teamclaw.store.schema import SCHEMA_VERSION, SchemaMeta
+from tally.store.schema import SCHEMA_VERSION, SchemaMeta
 from sqlalchemy.orm import Session
 
 

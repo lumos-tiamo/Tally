@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import time
 
-from teamclaw.session import MemoryBackend, SessionStore
+from tally.session import MemoryBackend, SessionStore
 
 
 def store() -> SessionStore:
@@ -19,7 +19,7 @@ def store() -> SessionStore:
 def test_no_redis_falls_back_and_says_why():
     session = SessionStore.connect(None)
     assert session.backend.name == "memory"
-    assert "no TEAMCLAW_REDIS_URL" in session.degraded_reason
+    assert "no TALLY_REDIS_URL" in session.degraded_reason
 
 
 def test_an_unreachable_redis_falls_back_rather_than_raising():

@@ -1,4 +1,4 @@
-/* TeamClaw console.
+/* Tally console.
    Dense and technical on purpose: this is an operator tool for reading token
    budgets and traces, so numbers are monospaced, aligned, and never truncated
    in a way that hides a magnitude. */

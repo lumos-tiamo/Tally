@@ -20,10 +20,10 @@ from pathlib import Path
 
 import pytest
 
-from teamclaw.execution.bridge import ToolBridge
-from teamclaw.execution.registry import ToolParam, ToolRegistry, ToolSpec
-from teamclaw.execution.sandbox import DockerSandbox, SandboxLimits, build_sandbox
-from teamclaw.execution.stubgen import write_package
+from tally.execution.bridge import ToolBridge
+from tally.execution.registry import ToolParam, ToolRegistry, ToolSpec
+from tally.execution.sandbox import DockerSandbox, SandboxLimits, build_sandbox
+from tally.execution.stubgen import write_package
 
 PROBE_ROOT = Path(__file__).resolve().parents[1] / "workspace" / "_pytest_docker"
 

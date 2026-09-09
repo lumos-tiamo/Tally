@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from teamclaw.execution.bridge import ToolBridge
-from teamclaw.execution.convergence import ConvergenceLoop, Escalation, parse_failure
-from teamclaw.execution.registry import ToolParam, ToolRegistry, ToolSpec
-from teamclaw.execution.sandbox import LocalSandbox, SandboxLimits, build_sandbox
-from teamclaw.execution.stubgen import params_from_json_schema, specs_from_mcp, write_package
-from teamclaw.execution.workspace import Workspace
+from tally.execution.bridge import ToolBridge
+from tally.execution.convergence import ConvergenceLoop, Escalation, parse_failure
+from tally.execution.registry import ToolParam, ToolRegistry, ToolSpec
+from tally.execution.sandbox import LocalSandbox, SandboxLimits, build_sandbox
+from tally.execution.stubgen import params_from_json_schema, specs_from_mcp, write_package
+from tally.execution.workspace import Workspace
 
 
 # --- sandbox --------------------------------------------------------------
@@ -176,7 +176,7 @@ def test_mcp_names_are_sanitised_into_python_identifiers():
 
 def test_signature_block_is_far_cheaper_than_json_schemas():
     """The claim the tools slot rests on, measured."""
-    from teamclaw.context.tokenizer import count_tokens
+    from tally.context.tokenizer import count_tokens
 
     registry = ToolRegistry().extend([
         ToolSpec(module="m", func=f"tool_{i}",

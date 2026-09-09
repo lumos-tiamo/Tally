@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from teamclaw.context.ledger import Budget, BudgetTooSmall, ContextLedger, make_bid
-from teamclaw.context.slots import DEFAULT_POLICIES, Item, SlotBid, SlotName, SlotPolicy
+from tally.context.ledger import Budget, BudgetTooSmall, ContextLedger, make_bid
+from tally.context.slots import DEFAULT_POLICIES, Item, SlotBid, SlotName, SlotPolicy
 
 
 def build(window: int = 8_000, max_output: int = 1_000) -> ContextLedger:

@@ -2,7 +2,7 @@
 
 所有数字来自本仓库的实测产物，可复现：`results/`、`data/datasets/*.summary.json`。
 时间与个人贡献两处留了占位符，需按你的实际情况填写 —— 这两项我无法代你判断。
-**标注"待实测"的部分尚无数据，配好 provider key 后由 `teamclaw ablate` 产出 —— 在那之前不要写进简历。**
+**标注"待实测"的部分尚无数据，配好 provider key 后由 `tally ablate` 产出 —— 在那之前不要写进简历。**
 
 ---
 
@@ -151,7 +151,7 @@ US-GAAP 概念映射、真值构造、文档解析工具）、三个异构验证
 
 ---
 
-## 待实测（配好 key 后由 `teamclaw ablate` 产出）
+## 待实测（配好 key 后由 `tally ablate` 产出）
 
 - 8 组消融的准确率对比（含 `strong-naked` 组的"架构贡献 vs 模型贡献"）
 - LLM-judge 与人工标注的 κ 一致率

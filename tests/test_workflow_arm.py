@@ -14,25 +14,25 @@ from pathlib import Path
 
 import pytest
 
-from teamclaw.evaluation.harness import CaseOutcome, EvalRun
-from teamclaw.evaluation.metrics import RunMetrics
-from teamclaw.evaluation.runner import ARMS, ARMS_BY_NAME, RunnerContext, make_case_runner
-from teamclaw.evaluation.workflow_arm import (
+from tally.evaluation.harness import CaseOutcome, EvalRun
+from tally.evaluation.metrics import RunMetrics
+from tally.evaluation.runner import ARMS, ARMS_BY_NAME, RunnerContext, make_case_runner
+from tally.evaluation.workflow_arm import (
     CAPTIONS,
     build_graph,
     caption_is_plausible,
     statement_caption_sample,
 )
-from teamclaw.models.providers.fake import FakeProvider
-from teamclaw.models.router import Registry, Router
-from teamclaw.observability.trace import Tracer, new_run_id
-from teamclaw.orchestration.graph import TaskGraph
-from teamclaw.scenarios.dd_finance.fields import L1_KEYS
+from tally.models.providers.fake import FakeProvider
+from tally.models.router import Registry, Router
+from tally.observability.trace import Tracer, new_run_id
+from tally.orchestration.graph import TaskGraph
+from tally.scenarios.dd_finance.fields import L1_KEYS
 
 
 # --- registration and dispatch -------------------------------------------
 def test_the_arm_is_registered_and_dispatches_to_the_graph_runner(tmp_path: Path):
-    from teamclaw.scenarios.dd_finance.sec_client import SecClient
+    from tally.scenarios.dd_finance.sec_client import SecClient
 
     assert "workflow-c" in ARMS_BY_NAME
     assert ARMS_BY_NAME["workflow-c"].deterministic_workflow
@@ -63,8 +63,8 @@ def test_the_arm_config_records_which_mode_produced_a_score():
 # --- graph shape ----------------------------------------------------------
 def test_the_graph_calls_a_model_at_exactly_one_node(tmp_path: Path, sample_case):
     """The whole premise: code everywhere except where judgement is required."""
-    from teamclaw.execution.workspace import Workspace
-    from teamclaw.scenarios.dd_finance.sec_client import SecClient
+    from tally.execution.workspace import Workspace
+    from tally.scenarios.dd_finance.sec_client import SecClient
 
     tracer = Tracer(new_run_id(), tmp_path / "runs")
     registry = Registry(providers={"fake": FakeProvider()})
@@ -231,8 +231,8 @@ def test_a_stub_model_answering_every_field_the_same_way_resolves_nothing(
     current_assets and four others — each confidently wrong and attributed to the
     wrong field.
     """
-    from teamclaw.execution.workspace import Workspace
-    from teamclaw.scenarios.dd_finance.sec_client import SecClient
+    from tally.execution.workspace import Workspace
+    from tally.scenarios.dd_finance.sec_client import SecClient
 
     statements = "\n".join([
         "Item 8. Financial Statements",
@@ -273,8 +273,8 @@ def test_a_stub_model_answering_every_field_the_same_way_resolves_nothing(
 
 def test_no_vocabulary_means_no_model_call_at_all(tmp_path: Path, sample_case):
     """Asking a model to choose from an empty list invites invention."""
-    from teamclaw.execution.workspace import Workspace
-    from teamclaw.scenarios.dd_finance.sec_client import SecClient
+    from tally.execution.workspace import Workspace
+    from tally.scenarios.dd_finance.sec_client import SecClient
 
     empty = tmp_path / "empty.txt"
     empty.write_text("Item 8. Financial Statements\nNothing tabular here.\n", encoding="utf-8")
@@ -302,7 +302,7 @@ def test_the_sampler_finds_statement_rows_not_narrative_tables(tmp_path: Path):
     """Captions sit on their own line; the figures follow on the next ones."""
     import sys
 
-    sandbox = (Path(__file__).resolve().parents[1] / "src" / "teamclaw" /
+    sandbox = (Path(__file__).resolve().parents[1] / "src" / "tally" /
                "scenarios" / "dd_finance" / "sandbox_tools")
     sys.path.insert(0, str(sandbox))
     import doc  # noqa: PLC0415

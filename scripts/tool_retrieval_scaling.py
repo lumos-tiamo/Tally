@@ -21,12 +21,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from teamclaw.config import settings
-from teamclaw.context.tokenizer import count_tokens
-from teamclaw.execution.registry import ToolParam, ToolRegistry, ToolSpec
-from teamclaw.execution.workspace import Workspace
-from teamclaw.scenarios.dd_finance.sec_client import SecClient
-from teamclaw.scenarios.dd_finance.spec import build_tools
+from tally.config import settings
+from tally.context.tokenizer import count_tokens
+from tally.execution.registry import ToolParam, ToolRegistry, ToolSpec
+from tally.execution.workspace import Workspace
+from tally.scenarios.dd_finance.sec_client import SecClient
+from tally.scenarios.dd_finance.spec import build_tools
 
 STEP = "extract the total revenue figure from the income statement of the filing"
 SIZES = (17, 40, 80, 160, 320)

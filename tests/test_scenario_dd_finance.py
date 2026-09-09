@@ -6,22 +6,22 @@ import datetime as dt
 
 import pytest
 
-from teamclaw.execution.registry import ToolParam, ToolRegistry, ToolSpec
-from teamclaw.scenarios.dd_finance.concepts import (
+from tally.execution.registry import ToolParam, ToolRegistry, ToolSpec
+from tally.scenarios.dd_finance.concepts import (
     ConceptResolver,
     Fact,
     parse_company_facts,
     resolve_identity_components,
 )
-from teamclaw.scenarios.dd_finance.fields import (
+from tally.scenarios.dd_finance.fields import (
     L1_FIELDS,
     L2_BY_KEY,
     L2_RATIOS,
     Period,
 )
-from teamclaw.scenarios.dd_finance.groundtruth import check_balance_sheet_identity
-from teamclaw.scenarios.dd_finance.sec_client import SecClient, fiscal_year_of
-from teamclaw.scenarios.dd_finance.spec import assert_no_truth_leak, build_skills
+from tally.scenarios.dd_finance.groundtruth import check_balance_sheet_identity
+from tally.scenarios.dd_finance.sec_client import SecClient, fiscal_year_of
+from tally.scenarios.dd_finance.spec import assert_no_truth_leak, build_skills
 
 FY_END = dt.date(2024, 9, 28)
 

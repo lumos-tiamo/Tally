@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from teamclaw.evaluation.metrics import (
+from tally.evaluation.metrics import (
     abstention_accuracy,
     aggregate,
     calculation_consistency,

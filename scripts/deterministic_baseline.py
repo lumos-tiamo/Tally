@@ -21,21 +21,21 @@ from pathlib import Path
 warnings.filterwarnings("ignore")
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src" / "teamclaw" / "scenarios" / "dd_finance" / "sandbox_tools"))
+sys.path.insert(0, str(ROOT / "src" / "tally" / "scenarios" / "dd_finance" / "sandbox_tools"))
 
 import doc  # noqa: E402
 
-from teamclaw.config import settings  # noqa: E402
-from teamclaw.evaluation.metrics import (  # noqa: E402
+from tally.config import settings  # noqa: E402
+from tally.evaluation.metrics import (  # noqa: E402
     abstention_accuracy,
     aggregate,
     citation_verifiability,
     numeric_accuracy,
 )
-from teamclaw.execution.workspace import Workspace  # noqa: E402
-from teamclaw.scenarios.dd_finance.groundtruth import load_dataset  # noqa: E402
-from teamclaw.scenarios.dd_finance.sec_client import SecClient  # noqa: E402
-from teamclaw.scenarios.dd_finance.spec import SecHandlers  # noqa: E402
+from tally.execution.workspace import Workspace  # noqa: E402
+from tally.scenarios.dd_finance.groundtruth import load_dataset  # noqa: E402
+from tally.scenarios.dd_finance.sec_client import SecClient  # noqa: E402
+from tally.scenarios.dd_finance.spec import SecHandlers  # noqa: E402
 
 # Caption synonyms per L1 field, in preference order. Deliberately hand-written:
 # the point of this arm is to show what a fixed rule set achieves so that a

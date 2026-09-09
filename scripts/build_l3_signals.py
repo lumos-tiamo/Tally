@@ -14,16 +14,16 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from teamclaw.config import settings
-from teamclaw.scenarios.dd_finance.groundtruth import load_dataset
-from teamclaw.scenarios.dd_finance.signals import SIGNALS, detect, detectable
+from tally.config import settings
+from tally.scenarios.dd_finance.groundtruth import load_dataset
+from tally.scenarios.dd_finance.signals import SIGNALS, detect, detectable
 
 
 def main() -> int:
     cfg = settings()
     cases = load_dataset(cfg.paths.datasets / "dd_finance_groundtruth.jsonl")
     if not cases:
-        print("no L1 corpus; run `teamclaw dataset build` first")
+        print("no L1 corpus; run `tally dataset build` first")
         return 1
 
     by_ticker: dict[str, list] = {}

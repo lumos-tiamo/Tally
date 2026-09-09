@@ -22,14 +22,14 @@ from pathlib import Path
 
 import pytest
 
-from teamclaw.execution.workspace import Workspace
-from teamclaw.models.providers.fake import ScriptedProvider
-from teamclaw.models.router import Registry, Router
-from teamclaw.observability.trace import Tracer, new_run_id
-from teamclaw.orchestration.agent import Agent          # the one and only runtime
-from teamclaw.scenarios import bi_analyst, code_engineer, deep_research
+from tally.execution.workspace import Workspace
+from tally.models.providers.fake import ScriptedProvider
+from tally.models.router import Registry, Router
+from tally.observability.trace import Tracer, new_run_id
+from tally.orchestration.agent import Agent          # the one and only runtime
+from tally.scenarios import bi_analyst, code_engineer, deep_research
 
-SRC = Path(__file__).resolve().parents[1] / "src" / "teamclaw"
+SRC = Path(__file__).resolve().parents[1] / "src" / "tally"
 SCENARIOS = SRC / "scenarios"
 RUNTIME_PACKAGES = ("orchestration", "context", "execution", "models", "observability")
 

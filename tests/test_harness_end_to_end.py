@@ -1,11 +1,11 @@
 """The harness driven all the way through, offline.
 
-This exercises the path `teamclaw eval` takes — load a case, run an agent, parse
+This exercises the path `tally eval` takes — load a case, run an agent, parse
 the deliverable, score it, pool the results — using a scripted provider so it
 needs no credentials and no network. Its purpose is to prove the plumbing works
 *and* that the harness refuses to call the result a measurement.
 
-That second half is the point. The first real invocation of `teamclaw eval` on a
+That second half is the point. The first real invocation of `tally eval` on a
 machine with no credentials produced a full report of zeros marked
 `valid_measurement: True`, which is indistinguishable from a genuine score of
 zero. Both ways of not being a measurement — a test double doing the work, and no
@@ -17,16 +17,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from teamclaw.evaluation.harness import CaseRunResult, Harness
-from teamclaw.evaluation.metrics import RunMetrics
-from teamclaw.execution.workspace import Workspace
-from teamclaw.models.providers.fake import ScriptedProvider
-from teamclaw.models.router import Registry, Router
-from teamclaw.observability.accounting import Accountant
-from teamclaw.observability.trace import Tracer, new_run_id
-from teamclaw.orchestration.agent import Agent
-from teamclaw.scenarios.dd_finance.fields import L1_KEYS
-from teamclaw.scenarios.dd_finance.spec import build_spec, l1_objective, parse_output
+from tally.evaluation.harness import CaseRunResult, Harness
+from tally.evaluation.metrics import RunMetrics
+from tally.execution.workspace import Workspace
+from tally.models.providers.fake import ScriptedProvider
+from tally.models.router import Registry, Router
+from tally.observability.accounting import Accountant
+from tally.observability.trace import Tracer, new_run_id
+from tally.orchestration.agent import Agent
+from tally.scenarios.dd_finance.fields import L1_KEYS
+from tally.scenarios.dd_finance.spec import build_spec, l1_objective, parse_output
 
 
 def perfect_l1_script(truth: dict[str, float | None]) -> list[str]:
@@ -62,7 +62,7 @@ def run_harness(tmp_path: Path, case, script: list[str]):  # noqa: ANN001
         router = Router(registry, accountant=accountant, tracer=tracer)
         # No SEC tools: the scripted trajectory writes the deliverable directly,
         # because what is under test is the harness, not the extraction stack.
-        from teamclaw.execution.registry import ToolRegistry
+        from tally.execution.registry import ToolRegistry
 
         spec = build_spec(tools=ToolRegistry(), max_steps=4, prefer_docker=False)
         agent = Agent(spec, router=router, workspace=workspace, tracer=tracer,
@@ -134,7 +134,7 @@ def test_only_the_contract_keys_survive_parsing(tmp_path: Path, sample_case):
 
 def test_a_run_where_no_model_was_reachable_is_not_a_measurement():
     """The failure that read as a genuine score of zero."""
-    from teamclaw.evaluation.harness import CaseOutcome, EvalRun
+    from tally.evaluation.harness import CaseOutcome, EvalRun
 
     run = EvalRun(arm="full", level="l1")
     run.outcomes.append(CaseOutcome(

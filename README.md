@@ -1,4 +1,4 @@
-# TeamClaw
+# Tally
 
 A multi-agent platform where the agent's only action is **writing Python in a
 sandbox**, its context is allocated by an auditable **token budget**, and every
@@ -10,14 +10,14 @@ design — if a strong paid model produced the numbers, the question would be
 unanswerable.
 
 ```
-teamclaw serve        # the console and the API on localhost:8000
-teamclaw doctor       # what is configured and reachable
-teamclaw scenarios    # cost of adding a scenario
-teamclaw tools        # tool-representation token costs
-teamclaw dataset build && teamclaw dataset stats
-teamclaw baseline     # the zero-model floor
-teamclaw eval --arm full --level l1     # or --level l2 / l3
-teamclaw ablate --level l1
+tally serve        # the console and the API on localhost:8000
+tally doctor       # what is configured and reachable
+tally scenarios    # cost of adding a scenario
+tally tools        # tool-representation token costs
+tally dataset build && tally dataset stats
+tally baseline     # the zero-model floor
+tally eval --arm full --level l1     # or --level l2 / l3
+tally ablate --level l1
 ```
 
 ---
@@ -308,7 +308,7 @@ could not vouch for, which is worse than not having one.
 ### Not yet measured
 
 **The model arms.** No provider credentials are configured in this repository, so
-seven of the eight arms in `teamclaw ablate` — `full`, `minus-ledger`,
+seven of the eight arms in `tally ablate` — `full`, `minus-ledger`,
 `minus-tool-retrieval`, `minus-memory`, `minus-compaction`, `minus-skills`,
 `strong-naked` — are implemented and runnable but unrun. Same for the judge's κ
 calibration, which needs both a judge model and a human-labelled set.
@@ -319,17 +319,17 @@ The harness will not let that gap be papered over. A run is a measurement only i
 no test double served any call **and** real model tokens were consumed:
 
 ```
-$ teamclaw eval --arm full --level l1
+$ tally eval --arm full --level l1
 no usable model provider — every case would fail on NoProviderAvailable
 and the report would be a table of zeros.
 Configure at least one free-tier key in .env, or run ollama serve …
-Run teamclaw baseline for the zero-model floor, which needs no provider at all.
+Run tally baseline for the zero-model floor, which needs no provider at all.
 ```
 
 Both halves of that guard exist because both failures happened here. The
 scripted-provider path scores a perfect 1.000 on a case and is still refused
 (`tests/test_harness_end_to_end.py`), and the *first* real invocation of
-`teamclaw eval` with no credentials produced a full report of zeros marked
+`tally eval` with no credentials produced a full report of zeros marked
 `valid_measurement: True` — indistinguishable from a genuine score of zero. There
 is a test named after that one too.
 
@@ -339,14 +339,14 @@ is a test named after that one too.
 # A — entirely local. No account, no key. ~5GB model download.
 brew install ollama && ollama serve &
 ollama pull qwen3:8b
-teamclaw doctor                       # ollama should read available=yes
-teamclaw ablate --level l1 --limit 30
+tally doctor                       # ollama should read available=yes
+tally ablate --level l1 --limit 30
 
 # B — free cloud tier. Faster and stronger; needs one signup.
 #     Set any one of these in .env, then the same command:
-#     TEAMCLAW_GEMINI_API_KEY / TEAMCLAW_GLM_API_KEY
-#     TEAMCLAW_GROQ_API_KEY   / TEAMCLAW_CEREBRAS_API_KEY
-teamclaw ablate --level l1 --limit 30
+#     TALLY_GEMINI_API_KEY / TALLY_GLM_API_KEY
+#     TALLY_GROQ_API_KEY   / TALLY_CEREBRAS_API_KEY
+tally ablate --level l1 --limit 30
 ```
 
 Path A cannot run the `judge`, by design — see the routing table. Everything
@@ -356,7 +356,7 @@ else, including all seven agent arms, runs on the local tier.
 
 ## The console
 
-`teamclaw serve` puts the platform behind FastAPI and serves an operator console
+`tally serve` puts the platform behind FastAPI and serves an operator console
 at `/`. It exists for one reason: **the context-engineering work is the hardest
 part of this system to explain in a sentence and the easiest to show.**
 
@@ -710,7 +710,7 @@ named regression test:
 ## Layout
 
 ```
-src/teamclaw/
+src/tally/
   config.py           settings and paths
   models/             providers, purpose-tiered router, quota, cache
   context/            ledger, slots, compactor, memory, skills, retrieval
@@ -742,9 +742,9 @@ docs/superpowers/specs/2026-09-09-agent-platform-design.md
 
 ```bash
 uv venv --python 3.13 && uv pip install -e ".[dev]"
-cp .env.example .env          # set TEAMCLAW_SEC_USER_AGENT at minimum
+cp .env.example .env          # set TALLY_SEC_USER_AGENT at minimum
 python -m pytest -q           # 273 offline; 11 more if a sandbox image exists
-teamclaw doctor
+tally doctor
 ```
 
 SEC requires a self-identifying `User-Agent`; the client refuses to fetch without
@@ -753,6 +753,6 @@ to disk, which is a correctness property rather than an optimisation: filings ge
 amended, and an eval re-run next week must score against the corpus it was built
 from.
 
-Optional: `docker build -t teamclaw-sandbox:latest -f web/                   the console: one html, one css, one js — no build step
+Optional: `docker build -t tally-sandbox:latest -f web/                   the console: one html, one css, one js — no build step
 docker/Dockerfile.sandbox docker/`
 for container isolation, and `ollama pull qwen3:8b` for local extraction.

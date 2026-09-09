@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-SANDBOX_TOOLS = Path(__file__).resolve().parents[1] / "src" / "teamclaw" / "scenarios" / "dd_finance" / "sandbox_tools"
+SANDBOX_TOOLS = Path(__file__).resolve().parents[1] / "src" / "tally" / "scenarios" / "dd_finance" / "sandbox_tools"
 sys.path.insert(0, str(SANDBOX_TOOLS))
 
 import doc  # noqa: E402

@@ -14,10 +14,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from teamclaw.api import create_app
-from teamclaw.config import Paths, Settings
-from teamclaw.models.providers.fake import ScriptedProvider
-from teamclaw.models.router import Registry
+from tally.api import create_app
+from tally.config import Paths, Settings
+from tally.models.providers.fake import ScriptedProvider
+from tally.models.router import Registry
 
 SCRIPT = [
     "THOUGHT: write the answer\n```python\n"
@@ -72,7 +72,7 @@ def test_api_responses_are_never_cached(client: TestClient):
 
 def test_the_console_is_served(client: TestClient):
     assert client.get("/").status_code == 200
-    assert "TeamClaw" in client.get("/").text
+    assert "Tally" in client.get("/").text
 
 
 def test_the_scenario_catalogue_comes_from_the_code(client: TestClient):
@@ -297,7 +297,7 @@ def test_reads_are_open_and_mutations_need_the_token(tmp_path: Path):
         assert blocked.status_code == 401
         assert "token" in blocked.json()["detail"].lower()
 
-        allowed = client.post("/api/agents", headers={"X-Teamclaw-Token": "s3cret"},
+        allowed = client.post("/api/agents", headers={"X-Tally-Token": "s3cret"},
                               json={"name": "sneaky", "scenario": "dd_finance",
                                     "persona": "x" * 20})
         assert allowed.status_code == 201
@@ -323,7 +323,7 @@ def test_health_surfaces_the_configuration_it_would_be_dangerous_to_hide(tmp_pat
         health = client.get("/api/insight/health").json()
         joined = " ".join(health["config_warnings"])
         assert "remote code execution" in joined
-        assert "TEAMCLAW_REDIS_URL" in joined
+        assert "TALLY_REDIS_URL" in joined
 
 
 def test_insight_reports_no_usable_provider_when_only_fakes_are_present(client: TestClient):

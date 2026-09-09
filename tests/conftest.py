@@ -12,13 +12,13 @@ from pathlib import Path
 
 import pytest
 
-from teamclaw.context.ledger import Budget
-from teamclaw.execution.registry import ToolParam, ToolRegistry, ToolSpec
-from teamclaw.execution.workspace import Workspace
-from teamclaw.models.providers.fake import FakeProvider, ScriptedProvider
-from teamclaw.models.router import Registry, Router
-from teamclaw.observability.trace import Tracer, new_run_id
-from teamclaw.orchestration.agent import AgentSpec
+from tally.context.ledger import Budget
+from tally.execution.registry import ToolParam, ToolRegistry, ToolSpec
+from tally.execution.workspace import Workspace
+from tally.models.providers.fake import FakeProvider, ScriptedProvider
+from tally.models.router import Registry, Router
+from tally.observability.trace import Tracer, new_run_id
+from tally.orchestration.agent import AgentSpec
 
 
 @pytest.fixture
@@ -98,7 +98,7 @@ def agent_spec(demo_tools: ToolRegistry) -> AgentSpec:
 @pytest.fixture
 def sample_case():
     """A ground-truth case built from real Apple FY2024 figures."""
-    from teamclaw.scenarios.dd_finance.groundtruth import GroundTruthCase
+    from tally.scenarios.dd_finance.groundtruth import GroundTruthCase
 
     return GroundTruthCase(
         case_id="AAPL-FY2024", ticker="AAPL", cik="0000320193", fiscal_year=2024,

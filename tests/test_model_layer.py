@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from teamclaw.models.base import (
+from tally.models.base import (
     Message,
     NotConfigured,
     PaidCallBlocked,
@@ -16,10 +16,10 @@ from teamclaw.models.base import (
     RateLimited,
     request_fingerprint,
 )
-from teamclaw.models.cache import CompletionCache
-from teamclaw.models.providers.fake import FakeProvider
-from teamclaw.models.quota import QuotaLimit, QuotaTracker
-from teamclaw.models.router import NoProviderAvailable, Registry, Router
+from tally.models.cache import CompletionCache
+from tally.models.providers.fake import FakeProvider
+from tally.models.quota import QuotaLimit, QuotaTracker
+from tally.models.router import NoProviderAvailable, Registry, Router
 
 
 def registry_with(*providers, policy=None):  # noqa: ANN001
@@ -71,7 +71,7 @@ def test_a_paid_provider_is_unreachable_without_explicit_opt_in():
 
 
 def test_paid_call_blocked_is_raised_by_the_provider_itself():
-    from teamclaw.models.providers.openai_compat import OpenAICompatProvider
+    from tally.models.providers.openai_compat import OpenAICompatProvider
 
     provider = OpenAICompatProvider(
         name="strong", base_url="https://example.invalid", api_key="k",
@@ -83,7 +83,7 @@ def test_paid_call_blocked_is_raised_by_the_provider_itself():
 
 def test_high_volume_purposes_route_to_local_before_the_scarce_free_tier():
     """Extraction must not burn the daily request budget planning needs."""
-    from teamclaw.models.router import DEFAULT_POLICY
+    from tally.models.router import DEFAULT_POLICY
 
     assert DEFAULT_POLICY[Purpose.EXTRACT][0] == "ollama"
     assert DEFAULT_POLICY[Purpose.PLAN][0] != "ollama"
@@ -113,7 +113,7 @@ def test_a_local_only_machine_can_serve_every_purpose_except_judging():
 
 def test_the_local_tier_is_last_resort_for_reasoning_and_first_for_extraction():
     """Ordering encodes that an 8B model is a fallback planner, not a good one."""
-    from teamclaw.models.router import DEFAULT_POLICY
+    from tally.models.router import DEFAULT_POLICY
 
     assert DEFAULT_POLICY[Purpose.PLAN][-1] == "ollama"
     assert DEFAULT_POLICY[Purpose.CODE][-1] == "ollama"
@@ -207,7 +207,7 @@ def test_cost_is_attributed_per_agent_so_a_subagent_is_visible():
 
 
 def test_a_cache_hit_is_billed_at_zero():
-    from teamclaw.observability.accounting import Accountant
+    from tally.observability.accounting import Accountant
 
     accountant = Accountant()
     entry = accountant.record(model="strong-paid", provider="p", tokens_in=1_000_000,

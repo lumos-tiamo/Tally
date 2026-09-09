@@ -28,16 +28,16 @@ import json
 import sys
 from pathlib import Path
 
-from teamclaw.config import settings
-from teamclaw.context.slots import SlotName
-from teamclaw.evaluation.runner import ARMS, ArmConfig
-from teamclaw.execution.workspace import Workspace
-from teamclaw.models.providers.fake import ScriptedProvider
-from teamclaw.models.router import Registry, Router
-from teamclaw.observability.trace import Tracer, new_run_id
-from teamclaw.orchestration.agent import Agent
-from teamclaw.scenarios.dd_finance.sec_client import SecClient
-from teamclaw.scenarios.dd_finance.spec import build_spec, build_tools, l1_objective
+from tally.config import settings
+from tally.context.slots import SlotName
+from tally.evaluation.runner import ARMS, ArmConfig
+from tally.execution.workspace import Workspace
+from tally.models.providers.fake import ScriptedProvider
+from tally.models.router import Registry, Router
+from tally.observability.trace import Tracer, new_run_id
+from tally.orchestration.agent import Agent
+from tally.scenarios.dd_finance.sec_client import SecClient
+from tally.scenarios.dd_finance.spec import build_spec, build_tools, l1_objective
 
 # A trajectory that touches the document, persists artefacts and accumulates
 # history — the shape a real L1 extraction has, without needing a model to

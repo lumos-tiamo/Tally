@@ -11,8 +11,8 @@ import hashlib
 import json
 import time
 
-from teamclaw.channels import FeishuChannel, build_channels
-from teamclaw.config import Settings
+from tally.channels import FeishuChannel, build_channels
+from tally.config import Settings
 
 ENCRYPT_KEY = "test-encrypt-key"
 VERIFICATION_TOKEN = "test-verification-token"
@@ -178,7 +178,7 @@ def test_malformed_content_falls_back_to_the_raw_string():
 
 
 def test_sending_without_credentials_raises_rather_than_failing_silently():
-    from teamclaw.channels import NotConfigured
+    from tally.channels import NotConfigured
     import pytest
 
     channel = FeishuChannel(verification_token=VERIFICATION_TOKEN)

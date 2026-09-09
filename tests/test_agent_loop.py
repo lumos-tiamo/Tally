@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from teamclaw.context.slots import SlotName
-from teamclaw.orchestration.actions import ActionKind, parse_action
-from teamclaw.orchestration.agent import Agent
-from teamclaw.orchestration.checkpoint import CheckpointStore, check_drift
-from teamclaw.orchestration.hitl import (
+from tally.context.slots import SlotName
+from tally.orchestration.actions import ActionKind, parse_action
+from tally.orchestration.agent import Agent
+from tally.orchestration.checkpoint import CheckpointStore, check_drift
+from tally.orchestration.hitl import (
     AutoDeny,
     Decision,
     InterruptResponse,

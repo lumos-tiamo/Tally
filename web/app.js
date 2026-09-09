@@ -1,4 +1,4 @@
-/* TeamClaw console.
+/* Tally console.
  *
  * No build step and no framework, deliberately: the rest of this project runs
  * offline with no credentials, and a dashboard that needs npm install to render
@@ -66,8 +66,8 @@ async function api(path, opts = {}) {
     ...opts,
     headers: {
       'Content-Type': 'application/json',
-      ...(localStorage.getItem('teamclaw_token')
-        ? { 'X-Teamclaw-Token': localStorage.getItem('teamclaw_token') }
+      ...(localStorage.getItem('tally_token')
+        ? { 'X-Tally-Token': localStorage.getItem('tally_token') }
         : {}),
       ...(opts.headers || {}),
     },
@@ -223,7 +223,7 @@ views.overview = async (main) => {
             statCard('Cases', nf(corpus.cases), `${nf(corpus.held_out)} held out`, { small: true }),
             statCard('Quarantined', nf(corpus.quarantined), 'failed a validity check', { small: true }),
             statCard('L1 coverage', pct(corpus.mean_l1_coverage), 'mean per case', { small: true }))
-        : el('div', { class: 'empty' }, 'Not built — run teamclaw dataset build'))));
+        : el('div', { class: 'empty' }, 'Not built — run tally dataset build'))));
 
   if (sig) {
     // Built with intermediate names rather than one deeply nested expression:

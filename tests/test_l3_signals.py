@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from teamclaw.evaluation.harness import score_case
-from teamclaw.evaluation.metrics import aggregate, signal_findings
-from teamclaw.scenarios.dd_finance.signals import (
+from tally.evaluation.harness import score_case
+from tally.evaluation.metrics import aggregate, signal_findings
+from tally.scenarios.dd_finance.signals import (
     SIGNALS,
     SIGNALS_BY_KEY,
     Severity,
@@ -188,7 +188,7 @@ def test_score_case_wires_l3_through_the_harness(sample_case):
 
 def test_the_l3_prompt_does_not_hand_the_agent_the_taxonomy():
     """Naming the signals would turn analysis into filling in a form."""
-    from teamclaw.scenarios.dd_finance.spec import l3_objective
+    from tally.scenarios.dd_finance.spec import l3_objective
 
     prompt = l3_objective("AAPL", 2024, 2023)
     for key in SIGNALS_BY_KEY:

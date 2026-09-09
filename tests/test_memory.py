@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from teamclaw.context.memory import (
+from tally.context.memory import (
     ConflictPolicy,
     MemoryKind,
     MemoryStore,

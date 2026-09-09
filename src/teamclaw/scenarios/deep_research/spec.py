@@ -154,7 +154,8 @@ def objective(topic: str, questions: tuple[str, ...] = ()) -> str:
         "  2. Register each source with a credibility tier, then record claims\n"
         "     against it with a supporting quote.\n"
         "  3. Check corroboration before concluding anything.\n"
-        "  4. Build the brief to `workspace/report.md`.\n\n"
+        "  4. Build the brief to `report.md` — paths are relative to your working\n"
+        "     directory, which is already the workspace.\n\n"
         "Then reply DONE with the headline findings and how well sourced each is."
     )
 

@@ -116,7 +116,8 @@ def objective(question: str, db_path: str) -> str:
     return (
         f"Answer this business question using the SQLite database at `{db_path}`:\n\n"
         f"  {question}\n\n"
-        "Write your answer to `workspace/answer.json` as:\n"
+        "Write your answer to `answer.json` (a relative path — your working "
+        "directory is already the workspace) as:\n"
         '  {"answer": <number or string>, "grain": "<what one row represents>",\n'
         '   "query": "<the SQL that produced it>", "caveats": "<or empty>"}\n\n'
         "If the schema cannot answer the question, write "

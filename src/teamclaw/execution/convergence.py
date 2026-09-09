@@ -35,6 +35,15 @@ from teamclaw.execution.sandbox import ExecResult
 TRACE_LINE = re.compile(r'File "[^"]*step\.py", line (\d+)')
 EXC_LINE = re.compile(r"^(\w+(?:Error|Exception|Exit|Interrupt|Warning))\b:?\s*(.*)$", re.MULTILINE)
 ATTR_MISS = re.compile(r"module '([\w.]+)' has no attribute '(\w+)'")
+# A wrong keyword or arity on a tool call. This is the single most common way a
+# model misuses a tool — it invents a parameter — and the first real model run
+# produced four of them. Without attributing it to a module the tool surface was
+# never re-injected, so the correction the model most needed was the one it did
+# not get.
+BAD_KWARG = re.compile(r"(\w+)\(\) got an unexpected keyword argument '(\w+)'")
+BAD_ARITY = re.compile(
+    r"(\w+)\(\) (?:takes|missing) .*?(?:argument|positional)", re.DOTALL
+)
 NAME_MISS = re.compile(r"name '(\w+)' is not defined")
 IMPORT_MISS = re.compile(r"No module named '([\w.]+)'")
 TOOL_ERR = re.compile(r"ToolError: ([\w.]+): (.*)")
@@ -92,7 +101,21 @@ class Failure:
         }
 
 
-def parse_failure(result: ExecResult) -> Failure | None:
+def registry_module_for(func: str, registry: ToolRegistry | None) -> str:
+    """Which tool module exports ``func``, if any.
+
+    A TypeError names the function and not its module, and two modules may both
+    export a ``save_json``. An ambiguous name resolves to nothing rather than to
+    a guess: re-injecting the wrong module's signatures would be worse than
+    re-injecting none.
+    """
+    if registry is None:
+        return ""
+    owners = {spec.module for spec in registry.tools.values() if spec.func == func}
+    return owners.pop() if len(owners) == 1 else ""
+
+
+def parse_failure(result: ExecResult, registry: ToolRegistry | None = None) -> Failure | None:
     """Extract a structured failure from a sandbox result, or None on success."""
     if result.ok:
         return None
@@ -131,6 +154,12 @@ def parse_failure(result: ExecResult) -> Failure | None:
         symbol = m.group(1)
     elif (m := IMPORT_MISS.search(stderr)):
         symbol, module = m.group(1), m.group(1).split(".")[0]
+    elif (m := BAD_KWARG.search(stderr)) or (m := BAD_ARITY.search(stderr)):
+        # The traceback names the function but not its module, so it is looked
+        # up in the registry — which is what lets the feedback show the real
+        # signature instead of only naming the bad keyword.
+        symbol = m.group(1)
+        module = registry_module_for(symbol, registry)
 
     return Failure(kind=kind, message=message, line=line, symbol=symbol, module=module)
 
@@ -172,7 +201,7 @@ class ConvergenceLoop:
     # -- main entry point --------------------------------------------------
     def observe(self, result: ExecResult, *, code: str) -> Feedback | None:
         """Record a failure and produce the feedback to send back, or None if OK."""
-        failure = parse_failure(result)
+        failure = parse_failure(result, self.registry)
         if failure is None:
             return None
 
@@ -273,14 +302,29 @@ class ConvergenceLoop:
                 )
             case "KeyError":
                 return (
-                    "The key was absent. Print the actual keys or columns first; "
-                    "filings differ in structure between companies and years, so a key "
-                    "that worked for one may not exist in another."
+                    f"The key {failure.message.strip() or 'you used'} is not in that "
+                    "object. Print its keys before subscripting — tool results are "
+                    "documented in the signature but their exact shape is worth "
+                    "checking once, and filings differ in structure between companies "
+                    "and years so a key that worked for one may be absent in another."
                 )
             case "ToolError":
                 return (
                     f"The tool `{failure.module}.{failure.symbol}` rejected the call. "
                     "Check its signature and argument types with `help()` before retrying."
+                )
+            case "TypeError":
+                return (
+                    f"`{failure.symbol}` was called with arguments it does not accept. "
+                    "Use only the parameters in the signature below — do not invent "
+                    "keywords such as `year` or `item` to narrow a search. Filter the "
+                    "result yourself after the call."
+                )
+            case "IndexError":
+                return (
+                    "You indexed past the end of a list. Tool results carry a count; "
+                    "check it before subscripting, because a lookup that found "
+                    "nothing returns an empty list rather than raising."
                 )
             case "ZeroDivisionError":
                 return (

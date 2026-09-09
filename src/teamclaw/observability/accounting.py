@@ -17,34 +17,79 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
-# model id -> (usd per 1M input, usd per 1M output)
-PRICE_TABLE: dict[str, tuple[float, float]] = {
-    # free tiers
-    "gemini-2.5-flash": (0.0, 0.0),
-    "gemini-2.5-flash-lite": (0.0, 0.0),
-    "glm-4-flash": (0.0, 0.0),
-    "glm-4.5-flash": (0.0, 0.0),
-    "llama-3.3-70b-versatile": (0.0, 0.0),
-    "qwen3-8b-local": (0.0, 0.0),
+# Two separate facts, kept separate.
+#
+# A model has a list price. A *route* decides whether it is charged. Mixing the
+# two into one table meant ``gemini-2.5-flash`` was stored at 0.0 because it has
+# a free tier, and a paid gateway serving the same model then reported $0.00 for
+# a run that actually spent — which is worse than reporting nothing, because it
+# reads as a measurement.
+#
+# Prices are published list prices in USD per million tokens, and therefore
+# *estimates*: a gateway marks up or discounts and this code cannot know which.
+# Token counts come from the provider's own usage block and are exact. Anywhere
+# a figure has to be defensible, quote tokens.
+LIST_PRICES: dict[str, tuple[float, float]] = {
+    "gemini-2.5-flash-lite": (0.10, 0.40),
+    "gemini-2.5-flash": (0.30, 2.50),
+    "glm-4-flash": (0.10, 0.10),
+    "glm-4.5-flash": (0.10, 0.10),
+    "glm-5": (0.60, 2.00),
+    "deepseek-v4-flash": (0.10, 0.30),
+    "deepseek-v4-pro": (0.55, 2.20),
+    "qwen3.6-35b-a3b": (0.20, 0.60),
+    "Kimi-K2.6": (0.55, 2.20),
+    "gpt-5-mini": (0.25, 2.00),
+    "gpt-5.1": (1.25, 10.00),
+    "claude-opus-4-6": (5.00, 25.00),
+    "llama-3.3-70b-versatile": (0.60, 0.80),
+    "llama-3.3-70b": (0.60, 0.80),
+    "qwen3:8b": (0.0, 0.0),
     "bge-m3-local": (0.0, 0.0),
     "fake-model": (0.0, 0.0),
-    # paid, used only by the strong-naked ablation arm
-    "strong-paid": (5.0, 25.0),
+    "strong-paid": (5.00, 25.00),
 }
+
+# Providers that bill. Everything else is a free tier or local, and costs zero
+# however the model is priced elsewhere.
+BILLING_PROVIDERS = ("relay", "strong")
+
+# Used when a billing route serves a model with no listed price. Deliberately
+# mid-range rather than zero: an unpriced model should be over-reported, because
+# a cost estimate that silently rounds to zero is the failure worth avoiding.
+UNKNOWN_PAID_PRICE = (1.0, 4.0)
+
 DEFAULT_PRICE = (0.0, 0.0)
+PRICES_ARE_ESTIMATES = True
+
+# Back-compatible alias; LIST_PRICES is the definition.
+PRICE_TABLE = LIST_PRICES
 
 
-def price_for(model: str) -> tuple[float, float]:
-    if model in PRICE_TABLE:
-        return PRICE_TABLE[model]
-    for known, price in PRICE_TABLE.items():
+def is_billed(provider: str) -> bool:
+    return any(provider.startswith(prefix) for prefix in BILLING_PROVIDERS)
+
+
+def price_for(model: str, provider: str = "") -> tuple[float, float]:
+    """List price for a model on a route, in USD per million tokens.
+
+    Zero for a free-tier or local route whatever the model, and a positive
+    estimate for a billing route even when the model is unrecognised.
+    """
+    if not is_billed(provider):
+        return DEFAULT_PRICE
+    if model in LIST_PRICES:
+        return LIST_PRICES[model]
+    # Longest prefix wins, so `gemini-2.5-flash-lite` is not priced as
+    # `gemini-2.5-flash`.
+    for known in sorted(LIST_PRICES, key=len, reverse=True):
         if model.startswith(known):
-            return price
-    return DEFAULT_PRICE
+            return LIST_PRICES[known]
+    return UNKNOWN_PAID_PRICE
 
 
-def cost_of(model: str, tokens_in: int, tokens_out: int) -> float:
-    pin, pout = price_for(model)
+def cost_of(model: str, tokens_in: int, tokens_out: int, provider: str = "") -> float:
+    pin, pout = price_for(model, provider)
     return (tokens_in / 1_000_000) * pin + (tokens_out / 1_000_000) * pout
 
 
@@ -136,7 +181,10 @@ class Accountant:
         cost_usd: float | None = None,
     ) -> CostEntry:
         # A cache hit costs nothing even though the tokens were logically consumed.
-        billed = 0.0 if cached else (cost_usd if cost_usd is not None else cost_of(model, tokens_in, tokens_out))
+        billed = 0.0 if cached else (
+            cost_usd if cost_usd is not None
+            else cost_of(model, tokens_in, tokens_out, provider)
+        )
         entry = CostEntry(
             model=model,
             provider=provider,
@@ -175,8 +223,19 @@ class Accountant:
         return t
 
     def report(self) -> dict[str, Any]:
+        billed = [e for e in self.entries if is_billed(e.provider) and not e.cached]
         return {
             "total": self.total().to_json(),
+            "cost_note": (
+                "Dollar figures are list-price estimates for billed routes, not "
+                "invoiced amounts — a gateway marks up or discounts and this code "
+                "cannot know which. Token counts come from the provider's own "
+                "usage block and are exact."
+                if billed else
+                "No billed calls in this run; every dollar figure is zero because "
+                "nothing was charged, not because pricing is unknown."
+            ),
+            "billed_calls": len(billed),
             "by_purpose": {k: v.to_json() for k, v in self.by("purpose").items()},
             "by_model": {k: v.to_json() for k, v in self.by("model").items()},
             "by_agent": {k: v.to_json() for k, v in self.by("agent").items()},

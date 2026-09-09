@@ -82,8 +82,21 @@ class ExecResult:
     def ok(self) -> bool:
         return self.exit_code == 0 and not self.timed_out
 
+    ERROR_PREVIEW_CHARS = 600
+
     def to_json(self) -> dict[str, object]:
-        return {
+        """Span attributes for a sandbox execution.
+
+        A failure carries an ``error_preview`` — the tail of stderr, where the
+        exception actually is. The first version recorded only ``stderr_chars``,
+        and the first real model run produced five sandbox failures that were
+        impossible to diagnose from the trace at all. Recording the length of an
+        error instead of the error is not observability.
+
+        Success does not carry stdout: that is the agent's own output, it can be
+        large, and it is already the observation folded into the next prompt.
+        """
+        payload: dict[str, object] = {
             "exit_code": self.exit_code,
             "timed_out": self.timed_out,
             "duration_s": round(self.duration_s, 3),
@@ -93,6 +106,11 @@ class ExecResult:
             "stderr_chars": len(self.stderr),
             "truncated": self.truncated,
         }
+        if not self.ok and self.stderr:
+            tail = self.stderr.strip()[-self.ERROR_PREVIEW_CHARS:]
+            payload["error_preview"] = tail
+            payload["error_kind"] = _first_exception_name(self.stderr)
+        return payload
 
 
 def newest_mtime(root: Path) -> float:
@@ -175,6 +193,24 @@ def shift_traceback_lines(text: str, offset: int = PREAMBLE_LINES) -> str:
         return f"{match.group(1)}{max(1, n - offset)}"
 
     return re.sub(r"((?:step\.py|<stdin>)\", line )(\d+)", _fix, text)
+
+
+# Exception names in a traceback are frequently dotted —
+# ``json.decoder.JSONDecodeError``, ``subprocess.CalledProcessError`` — so the
+# pattern has to allow the module path and then keep only the class.
+_EXC_NAME = re.compile(
+    r"^((?:\w+\.)*\w*(?:Error|Exception|Exit|Interrupt|Warning))\s*:", re.MULTILINE
+)
+
+
+def _first_exception_name(stderr: str) -> str:
+    """Best-effort exception class from a traceback, for grouping failures.
+
+    Takes the last match: a chained traceback ends with the exception that
+    actually escaped, and that is the one worth grouping on.
+    """
+    names = _EXC_NAME.findall(stderr or "")
+    return names[-1].rsplit(".", 1)[-1] if names else ""
 
 
 def _truncate(text: str, cap: int) -> tuple[str, bool]:

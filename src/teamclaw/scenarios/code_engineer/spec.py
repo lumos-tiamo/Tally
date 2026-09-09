@@ -139,7 +139,8 @@ def objective(task: str, repo_root: str) -> str:
         "  2. Locate the relevant code with `repo.grep`, read only the ranges you need.\n"
         "  3. Make one change, then run the tests again and compare failure counts.\n"
         "  4. Repeat until green.\n\n"
-        "Write a summary to `workspace/change_report.json` as:\n"
+        "Write a summary to `change_report.json` (a relative path — your working "
+        "directory is already the workspace) as:\n"
         '  {"green": <bool>, "files_changed": [...], "tests_passed": <int>,\n'
         '   "tests_failed": <int>, "summary": "<what you changed and why>"}\n\n'
         "Then reply DONE. If you could not reach green, say which failure remains "

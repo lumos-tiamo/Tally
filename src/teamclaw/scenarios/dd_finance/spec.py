@@ -343,9 +343,11 @@ def l1_objective(ticker: str, fiscal_year: int) -> str:
         + "\n\nValues must be in **whole USD**, not thousands or millions — apply the\n"
         "table's scale. Where the filing does not disclose a field, emit\n"
         '{"value": null, "reason": "not_disclosed"}.\n\n'
-        "Write the result to `workspace/l1.json` as a single JSON object keyed by\n"
-        "field name, then reply DONE with a short summary of coverage. The file is\n"
-        "the deliverable; the summary is for the reader."
+        "Write the result to `l1.json` as a single JSON object keyed by field name,\n"
+        "then reply DONE with a short summary of coverage. The file is the\n"
+        "deliverable; the summary is for the reader.\n\n"
+        "Paths are relative to your working directory, which is already the\n"
+        "workspace — write `l1.json`, not `workspace/l1.json`."
     )
 
 
@@ -360,7 +362,8 @@ def l2_objective(ticker: str, fiscal_year: int) -> str:
         + "\n\nA metric whose inputs the filing does not disclose must be null with a\n"
         "reason — banks have no current ratio, financial filers often have no gross\n"
         "margin. Do not derive a missing input by subtraction.\n\n"
-        "Write the result to `workspace/l2.json` keyed by metric name, then reply DONE."
+        "Write the result to `l2.json` keyed by metric name (a relative path — your\n"
+        "working directory is already the workspace), then reply DONE."
     )
 
 
@@ -384,9 +387,10 @@ def l3_objective(ticker: str, fiscal_year: int, prior_year: int) -> str:
         "Report only what the numbers support. If the two years show nothing "
         "material, say so plainly — an invented concern is worse than a short "
         "report, and a list of every possible worry is not analysis.\n\n"
-        "Write the result to `workspace/l3.json` as "
-        '`{"findings": [...], "summary": "<two or three sentences>"}` and then '
-        "reply DONE."
+        "Write the result to `l3.json` (a relative path — your working directory is\n"
+        "already the workspace) as "
+        '`{"findings": [...], "summary": "<two or three sentences>"}`, '
+        "then reply DONE."
     )
 
 

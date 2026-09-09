@@ -82,6 +82,15 @@ class Settings:
     slack_bot_token: str = ""
 
     # provider credentials; empty string means "not configured"
+    # An OpenAI-compatible gateway serving many models behind one key. Paid
+    # credit, not a free tier — so it is registered as several named providers
+    # (one per model) and the cost accounting treats each on its own.
+    relay_base_url: str = ""
+    relay_key: str = ""
+    relay_model: str = "gemini-2.5-flash"
+    relay_cheap_model: str = "gemini-2.5-flash-lite"
+    relay_judge_model: str = "glm-5"
+
     gemini_key: str = ""
     glm_key: str = ""
     groq_key: str = ""
@@ -110,6 +119,12 @@ class Settings:
             feishu_encrypt_key=_env("TEAMCLAW_FEISHU_ENCRYPT_KEY"),
             slack_signing_secret=_env("TEAMCLAW_SLACK_SIGNING_SECRET"),
             slack_bot_token=_env("TEAMCLAW_SLACK_BOT_TOKEN"),
+            relay_base_url=_env("TEAMCLAW_RELAY_BASE_URL"),
+            relay_key=_env("TEAMCLAW_RELAY_API_KEY"),
+            relay_model=_env("TEAMCLAW_RELAY_MODEL", "gemini-2.5-flash"),
+            relay_cheap_model=_env("TEAMCLAW_RELAY_CHEAP_MODEL",
+                                   "gemini-2.5-flash-lite"),
+            relay_judge_model=_env("TEAMCLAW_RELAY_JUDGE_MODEL", "glm-5"),
             gemini_key=_env("TEAMCLAW_GEMINI_API_KEY"),
             glm_key=_env("TEAMCLAW_GLM_API_KEY"),
             groq_key=_env("TEAMCLAW_GROQ_API_KEY"),

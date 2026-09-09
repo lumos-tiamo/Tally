@@ -2,8 +2,23 @@
 
 This is the other way to organise the same work. Instead of letting the model
 decide every step, the pipeline is fixed and the model is called at exactly one
-kind of node — choosing among candidate figures that the deterministic caption
-lookup could not resolve. Everything else is code.
+node. Everything else is code.
+
+What that node does was decided by measurement, not by guessing
+------------------------------------------------------------------
+The first version had the model *disambiguate among candidate lines* the caption
+lookup found. Running it over all 135 cases routed **zero** fields to the model,
+which made the whole agent-versus-workflow comparison vacuous. Probing the score
+distribution explained why: it is bimodal. Of 168 field slots, 155 scored above
+the confident threshold and the failures scored *negative* (-8, -5, -2) or
+produced no candidate at all — only 2 landed in the ambiguous middle. A candidate
+either looks like a statement row or it plainly does not.
+
+So the real failure is not ambiguity, it is **vocabulary**: the filer used a
+caption the table does not contain. The node therefore asks the model to propose
+alternative captions for the fields code could not resolve, and the deterministic
+lookup runs again with them. That is the actual division of labour — code does
+the locating and the arithmetic, the model supplies the words.
 
 Why it belongs in the ablation rather than in a footnote
 -------------------------------------------------------
@@ -30,6 +45,7 @@ and is refused as a measurement just the same.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import warnings
 from pathlib import Path
@@ -80,18 +96,26 @@ CAPTIONS: dict[str, tuple[str, ...]] = {
               "Purchases of property and equipment", "Capital expenditures",
               "Additions to property, plant and equipment"),
 }
-CONFIDENT_ROW_SCORE = 12.0   # above this, no model call is needed
-AMBIGUOUS_ROW_SCORE = 4.0    # below this, treat as genuinely absent
+# Above this, the deterministic pass is trusted and no model call is made. There
+# is deliberately no lower band: the score is bimodal, so anything below this is
+# a vocabulary problem rather than a close call.
+CONFIDENT_ROW_SCORE = 12.0
+# How many alternative captions to ask for, and how many statement lines to show
+# the model as context. Both kept small: this node runs once per unresolved field
+# and the arm's whole claim is that it is cheap.
+CAPTION_SUGGESTIONS = 4
+CONTEXT_LINES = 40
 
-CHOOSE_SYSTEM = (
-    "You are resolving one figure from a financial statement. You are given "
-    "candidate lines from the filing, each with the numbers found on it and the "
-    "table's scale. Choose the line and the number that is the figure asked for, "
-    "for the fiscal year stated.\n"
+CAPTION_SYSTEM = (
+    "You are given the name of a financial-statement line item and a sample of "
+    "actual caption lines from one company's annual report. Filers word the same "
+    "line differently — 'Total net sales' versus 'Total revenues' versus "
+    "'Revenue, net'.\n"
+    "Propose the captions from THIS filing that would locate the requested item. "
+    "Copy them verbatim from the sample; do not invent wording that is not there.\n"
     "Reply with JSON only: "
-    '{"candidate": <0-based index>, "number_index": <0-based index>, '
-    '"reason": "<one short clause>"} '
-    'or {"candidate": null, "reason": "not_disclosed"} if none of them is it.'
+    '{"captions": ["<verbatim caption>", ...], "reason": "<one short clause>"} '
+    'or {"captions": [], "reason": "not_disclosed"} if the filing has no such line.'
 )
 
 
@@ -111,25 +135,177 @@ def _load_doc_module():  # noqa: ANN202
     return doc
 
 
-def _choose_with_model(
-    router: Router, *, field: str, fiscal_year: int, candidates: list[dict[str, Any]]
-) -> tuple[float | None, dict[str, Any], int]:
-    """The single node where judgement is required. Returns (value, provenance, tokens)."""
-    label = L1_BY_KEY[field].label
-    rendered = "\n".join(
-        f"[{i}] page~{c['page_estimate']} {c['item']} scale={c['scale']} "
-        f"line={c['line'][:120]!r} numbers={c['numbers'][:6]}"
-        for i, c in enumerate(candidates)
+def statement_caption_sample(doc, text_path: str, *, limit: int = CONTEXT_LINES) -> list[str]:
+    """Caption lines from the filing's financial statements, as model vocabulary.
+
+    Sampled from the document rather than described in the prompt, because the
+    point is to learn *this filer's* wording.
+
+    Two earlier attempts got the document structure wrong and are worth recording,
+    because the failure was silent both times. A single-line regex
+    ``caption ... 12,345`` matched almost nothing, because in HTML-converted
+    filings the caption sits on its own line and the figures follow on subsequent
+    lines. Tightening it to require two figures on the line made it worse rather
+    than empty: it started matching the tables that genuinely are one line —
+    geography lists, ATM counts, risk-weighted assets — and handed those to the
+    model as financial vocabulary.
+
+    So this mirrors what ``doc.find_number`` actually does: take a short
+    alphabetic line, then look at the window *after* it for the two or more
+    comma-grouped figures a statement row carries (one column per fiscal year).
+    Sampling is restricted to Item 8 where the outline finds it, since that is
+    where the statements live.
+    """
+    text = Path(text_path).read_text(encoding="utf-8", errors="replace")
+
+    outline = doc.outline(text_path)["items"]
+    offsets = {entry["item"]: entry["offset"] for entry in outline}
+    start = offsets.get("Item 8", 0)
+    end = min(
+        (o for item, o in offsets.items() if o > start),
+        default=len(text),
     )
+    region = text[start:end] if end > start else text
+
+    lines = region.splitlines()
+    figures = re.compile(r"\(?\$?\s?\d{1,3}(?:,\d{3})+")
+    seen: dict[str, None] = {}
+    for index, raw in enumerate(lines):
+        caption = raw.strip().strip(" .:$")
+        if not 4 <= len(caption) <= 70:
+            continue
+        if not caption[0].isalpha() or sum(ch.isdigit() for ch in caption) > 4:
+            continue
+        window = " ".join(lines[index + 1 : index + 6])
+        if len(figures.findall(window)) >= 2:
+            seen.setdefault(caption, None)
+        if len(seen) >= limit:
+            break
+    return list(seen)
+
+
+def caption_is_plausible(caption: str, field: str, vocabulary: list[str]) -> tuple[bool, str]:
+    """Gate a model-proposed caption before any number is read from it.
+
+    This exists because the first implementation had none, and it was not a
+    theoretical gap: a stub model that answered every field with the same caption
+    produced the *same* figure for cost_of_revenue, operating_income,
+    current_assets and four others — each one confidently wrong and attributed to
+    the wrong field. The module previously claimed the worst a bad caption could
+    do was find nothing. That claim was false.
+
+    Two independent conditions, both cheap:
+
+    *It must come from the filing.* The prompt says to copy captions verbatim from
+    the sample; this enforces it rather than trusting it, so the model cannot
+    invent wording and have the lookup wander.
+
+    *It must be lexically about the requested field.* The caption has to share a
+    content word with the field's own vocabulary — its label or one of the table's
+    known captions for it. That is a weak test, deliberately: it does not try to
+    judge whether the caption is *correct*, only to reject one that is about a
+    different line item entirely, which is the failure actually observed.
+    """
+    normalised = caption.strip().lower()
+    if not normalised:
+        return False, "empty caption"
+
+    in_filing = any(normalised == v.strip().lower() for v in vocabulary) or any(
+        normalised in v.strip().lower() for v in vocabulary
+    )
+    if not in_filing:
+        return False, "caption is not present in the filing's own statement lines"
+
+    caption_words = _content_words(normalised)
+    if not caption_words:
+        return False, "caption carries no content words"
+
+    scores = {other: _similarity(caption_words, _field_vocabulary(other))
+              for other in CAPTIONS}
+    mine = scores[field]
+    if mine == 0.0:
+        return False, (
+            f"caption shares no content word with {field!r}; it is about a "
+            "different line item"
+        )
+
+    # The requested field must be the *unique* best match. Two weaker rules were
+    # tried and both let real errors through. Non-zero overlap accepts "Total
+    # revenue, net of interest expense" as cost of revenue, because they share
+    # the word "revenue". Counting shared words ties them — the caption contains
+    # no word that distinguishes the two — and a tie accepted is a field chosen
+    # arbitrarily. Jaccard breaks the tie correctly by penalising the words the
+    # caption is *missing*: it covers little of cost-of-revenue's vocabulary
+    # ("cost", "goods", "sold") and more of revenue's.
+    best = max(scores.values())
+    if mine < best or sum(1 for sc in scores.values() if sc == best) > 1:
+        winners = sorted(o for o, sc in scores.items() if sc == best and o != field)
+        return False, (
+            f"caption does not distinguish {field!r} from {winners[0]!r}"
+            if winners else f"caption is ambiguous between fields"
+        )
+    return True, ""
+
+
+# Deliberately short. Three words that look like noise are the *only*
+# discriminators between pairs of fields in this taxonomy, and dropping them
+# collapses those pairs into ties the gate then has to reject:
+#   "current" separates current_assets from total_assets
+#   "net"     separates net_income from operating_income
+#   "non"     appears in bank captions that must not match either
+# A generic financial stopword list would have removed all three.
+_STOPWORDS = {"total", "of", "and", "the", "for", "in", "from", "to", "other",
+              "before", "after"}
+
+
+def _similarity(caption_words: set[str], field_words: set[str]) -> float:
+    """Jaccard overlap. Penalises what the caption lacks, not only what it shares."""
+    if not caption_words or not field_words:
+        return 0.0
+    return len(caption_words & field_words) / len(caption_words | field_words)
+
+
+def _content_words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z]+", text.lower())
+            if w not in _STOPWORDS and len(w) > 2}
+
+
+def _field_vocabulary(field: str) -> set[str]:
+    words = _content_words(L1_BY_KEY[field].label) | _content_words(field.replace("_", " "))
+    for known in CAPTIONS.get(field, ()):
+        words |= _content_words(known)
+    return words
+
+
+def _resolve_with_model(
+    router: Router,
+    doc,
+    *,
+    field: str,
+    text_path: str,
+    caption_sample: list[str],
+    scale_hint: float,
+) -> tuple[float | None, dict[str, Any], int]:
+    """Ask for this filer's wording, then re-run the deterministic lookup.
+
+    The model never reads a number and never does arithmetic — it only supplies
+    captions, which the same code path then locates and scales. That bounds what a
+    hallucination can do but does not eliminate it: a caption about the *wrong*
+    line item still yields a real figure attributed to the wrong field. That is
+    what :func:`caption_is_plausible` and the duplicate check in ``model_pass``
+    are for.
+    """
+    label = L1_BY_KEY[field].label
     messages = [
-        Message.system(CHOOSE_SYSTEM),
+        Message.system(CAPTION_SYSTEM),
         Message.user(
-            f"Figure: {label} ({field})\nFiscal year: {fiscal_year}\n\n"
-            f"Candidates:\n{rendered}"
+            f"Line item wanted: {label} ({field})\n\n"
+            f"Caption lines present in this filing:\n"
+            + "\n".join(f"  {c}" for c in caption_sample)
         ),
     ]
     completion = router.complete(
-        Purpose.EXTRACT, messages, max_tokens=200, task=f"choose:{field}"
+        Purpose.EXTRACT, messages, max_tokens=250, task=f"caption:{field}"
     )
     tokens = completion.tokens_in + completion.tokens_out
 
@@ -142,27 +318,43 @@ def _choose_with_model(
     except json.JSONDecodeError:
         return None, {"reason": "unparseable model reply"}, tokens
 
-    index = decision.get("candidate")
-    if index is None or not isinstance(index, int) or not 0 <= index < len(candidates):
-        return None, {"reason": "not_disclosed", "model_reason": decision.get("reason", "")}, tokens
+    proposed = [str(c).strip() for c in (decision.get("captions") or []) if str(c).strip()]
+    if not proposed:
+        return None, {"value": None, "reason": "not_disclosed",
+                      "model_reason": decision.get("reason", "")}, tokens
 
-    chosen = candidates[index]
-    values = [v for v in chosen.get("values") or [] if v is not None]
-    number_index = decision.get("number_index", 0)
-    if not isinstance(number_index, int) or not 0 <= number_index < len(values):
-        number_index = 0
-    if not values:
-        return None, {"reason": "candidate carried no parsable number"}, tokens
+    best: dict[str, Any] | None = None
+    used_caption = ""
+    rejected: list[dict[str, str]] = []
+    for caption in proposed[:CAPTION_SUGGESTIONS]:
+        allowed, why = caption_is_plausible(caption, field, caption_sample)
+        if not allowed:
+            rejected.append({"caption": caption, "why": why})
+            continue
+        for candidate in doc.find_number(text_path, caption, limit=2)["candidates"]:
+            values = [v for v in candidate.get("values") or [] if v is not None]
+            if not values:
+                continue
+            if best is None or candidate["looks_like_statement_row"] > best["looks_like_statement_row"]:
+                best, used_caption = candidate, caption
 
-    raw = values[number_index]
-    factor = chosen.get("scale_factor") or 1.0
+    if best is None or best["looks_like_statement_row"] < CONFIDENT_ROW_SCORE:
+        return None, {"value": None, "reason": "not_disclosed",
+                      "model_captions": proposed[:CAPTION_SUGGESTIONS],
+                      "rejected_captions": rejected,
+                      "model_reason": decision.get("reason", "")}, tokens
+
+    raw = [v for v in best["values"] if v is not None][0]
+    factor = best["scale_factor"] or scale_hint or 1.0
     value = abs(raw) * factor if field in {"capex", "cost_of_revenue"} else raw * factor
     return value, {
         "unit": "USD",
-        "page": chosen["page_estimate"],
-        "quote": chosen["quote"][:180],
-        "resolved_by": "model",
-        "model_reason": decision.get("reason", ""),
+        "page": best["page_estimate"],
+        "quote": best["quote"][:180],
+        "resolved_by": "model_caption",
+        "caption_used": used_caption,
+        "model_captions": proposed[:CAPTION_SUGGESTIONS],
+        "rejected_captions": rejected,
     }, tokens
 
 
@@ -187,62 +379,101 @@ def build_graph(
         return doc.to_text(path)
 
     def deterministic_pass(state: dict[str, Any]) -> dict[str, Any]:
-        """Caption lookup with no model involvement. Splits fields three ways."""
+        """Caption lookup with no model involvement. Two buckets: settled, or not.
+
+        There is no middle bucket, because the confidence score turned out to be
+        bimodal — see the module docstring. A field either matched a statement row
+        or the table simply lacks this filer's wording for it.
+        """
         text_path = state["to_text"]["path"]
         hint = {"thousands": 1e3, "millions": 1e6, "billions": 1e9}.get(
             state["to_text"].get("document_scale_hint") or "", 1.0
         )
         resolved: dict[str, Any] = {}
-        ambiguous: dict[str, list[dict[str, Any]]] = {}
-        absent: list[str] = []
+        unresolved: list[str] = []
 
         for field, captions in CAPTIONS.items():
             pool: list[dict[str, Any]] = []
             for caption in captions:
-                found = doc.find_number(text_path, caption, limit=3)
-                pool.extend(found["candidates"])
-            pool.sort(key=lambda c: -c["looks_like_statement_row"])
+                pool.extend(doc.find_number(text_path, caption, limit=3)["candidates"])
             pool = [c for c in pool if (c.get("values") or [None])[0] is not None]
+            pool.sort(key=lambda c: -c["looks_like_statement_row"])
 
-            if not pool or pool[0]["looks_like_statement_row"] < AMBIGUOUS_ROW_SCORE:
-                absent.append(field)
+            if not pool or pool[0]["looks_like_statement_row"] < CONFIDENT_ROW_SCORE:
+                unresolved.append(field)
                 continue
 
             best = pool[0]
-            if best["looks_like_statement_row"] >= CONFIDENT_ROW_SCORE:
-                raw = [v for v in best["values"] if v is not None][0]
-                factor = best["scale_factor"] or hint or 1.0
-                value = (abs(raw) * factor if field in {"capex", "cost_of_revenue"}
-                         else raw * factor)
-                resolved[field] = {
-                    "value": value, "unit": "USD", "page": best["page_estimate"],
-                    "quote": best["quote"][:180], "resolved_by": "deterministic",
-                }
-            else:
-                ambiguous[field] = pool[:4]
+            raw = [v for v in best["values"] if v is not None][0]
+            factor = best["scale_factor"] or hint or 1.0
+            resolved[field] = {
+                "value": (abs(raw) * factor if field in {"capex", "cost_of_revenue"}
+                          else raw * factor),
+                "unit": "USD", "page": best["page_estimate"],
+                "quote": best["quote"][:180], "resolved_by": "deterministic",
+            }
 
-        return {"resolved": resolved, "ambiguous": ambiguous, "absent": absent,
-                "scale_hint": hint}
+        return {"resolved": resolved, "unresolved": unresolved, "scale_hint": hint}
 
     def model_pass(state: dict[str, Any]) -> dict[str, Any]:
-        """The only node that calls a model, and only for what code could not settle."""
-        ambiguous = state["deterministic_pass"]["ambiguous"]
+        """The only node that calls a model, and only for the fields code missed.
+
+        The model supplies captions; the same deterministic code then locates and
+        scales the figure. It never reads a number, so it cannot inject one.
+        """
+        pass_one = state["deterministic_pass"]
+        unresolved = pass_one["unresolved"]
+        if not unresolved:
+            return {}
+
+        text_path = state["to_text"]["path"]
+        sample = statement_caption_sample(doc, text_path)
+        if not sample:
+            # No vocabulary to choose from: asking anyway would invite invention.
+            return {f: {"value": None, "reason": "not_disclosed",
+                        "why": "no statement captions could be sampled from the filing"}
+                    for f in unresolved}
+
+        # Captions and values already claimed, so a second field cannot be
+        # resolved to the same line. Two distinct L1 fields sharing one caption
+        # and one figure is the signature of a mis-proposed caption, and it is
+        # what a stub model produced on the first run of this node.
+        claimed_captions = {
+            (v.get("caption_used") or "").strip().lower()
+            for v in pass_one["resolved"].values()
+        }
+        claimed_values = {v.get("value") for v in pass_one["resolved"].values()}
+
         decided: dict[str, Any] = {}
-        for field, candidates in ambiguous.items():
-            with tracer.span(SpanKind.TOOL_CALL, f"choose:{field}") as span:
+        for field in unresolved:
+            with tracer.span(SpanKind.TOOL_CALL, f"caption:{field}") as span:
                 try:
-                    value, provenance, tokens = _choose_with_model(
-                        router, field=field, fiscal_year=case.fiscal_year,
-                        candidates=candidates,
+                    value, provenance, tokens = _resolve_with_model(
+                        router, doc, field=field, text_path=text_path,
+                        caption_sample=sample, scale_hint=pass_one["scale_hint"],
                     )
                 except NoProviderAvailable as exc:
                     span.set(error_message=str(exc), ok=False)
                     continue
                 budget["tokens"] += tokens
                 budget["model_calls"] += 1
+
+                caption = (provenance.get("caption_used") or "").strip().lower()
+                if value is not None and (caption in claimed_captions or value in claimed_values):
+                    span.set(ok=False, rejected="duplicate of an already-resolved field")
+                    decided[field] = {
+                        "value": None, "reason": "not_disclosed",
+                        "why": "the proposed caption resolved to a line already "
+                               "claimed by another field",
+                        "rejected_caption": provenance.get("caption_used"),
+                    }
+                    continue
+
                 span.set(ok=value is not None, tokens=tokens)
-            decided[field] = ({"value": value, **provenance} if value is not None
-                              else {"value": None, **provenance})
+            if value is not None:
+                claimed_captions.add(caption)
+                claimed_values.add(value)
+            decided[field] = {"value": value, **provenance}
         return decided
 
     def assemble(state: dict[str, Any]) -> dict[str, Any]:
@@ -250,7 +481,7 @@ def build_graph(
         answer: dict[str, Any] = {}
         answer.update(deterministic["resolved"])
         answer.update(state.get("model_pass") or {})
-        for field in deterministic["absent"]:
+        for field in deterministic["unresolved"]:
             answer.setdefault(field, {"value": None, "reason": "not_disclosed"})
         for field in L1_KEYS:
             answer.setdefault(field, {"value": None, "reason": "not_disclosed"})

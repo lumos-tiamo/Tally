@@ -219,9 +219,26 @@ platform offers rather than a dependency it imposes.
 **The model arms.** No provider credentials are configured in this repository, so
 every arm in `teamclaw ablate` — `full`, `minus-ledger`, `minus-tool-retrieval`,
 `minus-memory`, `minus-compaction`, `minus-skills`, `strong-naked` — is
-implemented and runnable but unrun. The harness refuses to publish scores from a
-fake provider (`EvalRun.publishable`), so there are no placeholder numbers here
-to mistake for results.
+implemented and runnable but unrun. Same for the judge's κ calibration, which
+needs both a judge model and a human-labelled set.
+
+The harness will not let that gap be papered over. A run is a measurement only if
+no test double served any call **and** real model tokens were consumed:
+
+```
+$ teamclaw eval --arm full --level l1
+no usable model provider — every case would fail on NoProviderAvailable
+and the report would be a table of zeros.
+Configure at least one free-tier key in .env, or run ollama serve …
+Run teamclaw baseline for the zero-model floor, which needs no provider at all.
+```
+
+Both halves of that guard exist because both failures happened here. The
+scripted-provider path scores a perfect 1.000 on a case and is still refused
+(`tests/test_harness_end_to_end.py`), and the *first* real invocation of
+`teamclaw eval` with no credentials produced a full report of zeros marked
+`valid_measurement: True` — indistinguishable from a genuine score of zero. There
+is a test named after that one too.
 
 Add a free-tier key to `.env` and `teamclaw ablate --level l1` produces the
 comparison table.
@@ -480,7 +497,7 @@ scripts/build_l3_signals.py
 scripts/arm_context_cost.py
 scripts/tool_retrieval_scaling.py
 results/               measured output, committed
-tests/                 181 tests — 170 offline, 11 container-gated
+tests/                 187 tests — 176 offline, 11 container-gated
 docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```
 
@@ -489,7 +506,7 @@ docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```bash
 uv venv --python 3.13 && uv pip install -e ".[dev]"
 cp .env.example .env          # set TEAMCLAW_SEC_USER_AGENT at minimum
-python -m pytest -q           # 170 offline; 11 more if a sandbox image exists
+python -m pytest -q           # 176 offline; 11 more if a sandbox image exists
 teamclaw doctor
 ```
 

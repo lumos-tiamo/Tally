@@ -2,11 +2,16 @@
 
 The harness owns three responsibilities that are easy to get wrong.
 
-**It refuses to report scores produced by a test double.** ``FakeProvider`` and
-``ScriptedProvider`` exist so the whole platform can be exercised offline, and a
+**It refuses to report scores that are not measurements.** Two ways a run can
+fail to be one, and both were found by running it. ``FakeProvider`` and
+``ScriptedProvider`` exist so the platform can be exercised offline, and a
 plumbing check that looks like a 100% accuracy result is worse than no result.
-Every published payload carries ``valid_measurement``, and it is false whenever a
-fake provider served any call. See :meth:`EvalRun.publishable`.
+Less obviously, a run where *no model was reachable at all* produces a table of
+zeros that reads exactly like a real score of zero — the first end-to-end
+invocation of ``teamclaw eval`` with no credentials configured reported
+``valid_measurement: True`` alongside zero tokens and zero steps. So
+:meth:`EvalRun.publishable` requires both no test doubles *and* evidence that
+model calls actually happened.
 
 **It records the conditions, not just the numbers.** Sandbox isolation level,
 provider mix, arm configuration, dataset digest. A score without its conditions
@@ -94,9 +99,39 @@ class EvalRun:
         return bool(self.providers_used & FAKE_PROVIDERS)
 
     @property
+    def model_calls(self) -> int:
+        return sum(o.run.steps for o in self.outcomes)
+
+    @property
+    def tokens_total(self) -> int:
+        return sum(o.run.tokens_total for o in self.outcomes)
+
+    @property
     def publishable(self) -> bool:
-        """A run is a measurement only if no test double served any call."""
-        return bool(self.outcomes) and not self.used_fake_provider
+        """A run is a measurement only if a real model actually did the work."""
+        return (
+            bool(self.outcomes)
+            and not self.used_fake_provider
+            and self.tokens_total > 0
+        )
+
+    def invalidity_reason(self) -> str:
+        if not self.outcomes:
+            return "no cases were run"
+        if self.used_fake_provider:
+            return (
+                "a fake/scripted provider served at least one call. These figures "
+                "verify plumbing only and must never be reported as eval results."
+            )
+        if self.tokens_total == 0:
+            errors = sorted({o.error.split(":")[0] for o in self.outcomes if o.error})
+            detail = f" ({', '.join(errors)})" if errors else ""
+            return (
+                "no model tokens were consumed, so nothing was actually evaluated"
+                f"{detail}. A table of zeros here is an unconfigured run, not a "
+                "score of zero."
+            )
+        return ""
 
     # -- aggregation -------------------------------------------------------
     def pooled(self, metric: str) -> MetricResult:
@@ -135,9 +170,7 @@ class EvalRun:
             "valid_measurement": self.publishable,
             "validity_note": (
                 "" if self.publishable
-                else "NOT A MEASUREMENT: a fake/scripted provider served at least one "
-                     "call. These figures verify plumbing only and must never be "
-                     "reported as eval results."
+                else f"NOT A MEASUREMENT: {self.invalidity_reason()}"
             ),
         }
 

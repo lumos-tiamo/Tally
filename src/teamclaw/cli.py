@@ -35,6 +35,38 @@ def _dataset_path() -> Path:
     return settings().paths.datasets / "dd_finance_groundtruth.jsonl"
 
 
+def _require_usable_providers(registry, *, allow_paid: bool) -> None:
+    """Fail before running rather than after, when no model can serve the work.
+
+    Without this the run completes, every case errors on NoProviderAvailable, and
+    the report is a table of zeros that looks like a real score. Checking up front
+    turns a confusing result into an actionable message.
+    """
+    from teamclaw.models.base import Purpose
+
+    usable = [
+        name for name, provider in registry.providers.items()
+        if provider.available()
+        and (allow_paid or not getattr(provider, "is_paid", False))
+        and name not in {"fake", "scripted"}
+    ]
+    if usable:
+        return
+    console.print(
+        "[red]no usable model provider[/red] — every case would fail on "
+        "NoProviderAvailable and the report would be a table of zeros.\n\n"
+        "Configure at least one free-tier key in [bold].env[/bold] "
+        "(TEAMCLAW_GEMINI_API_KEY, TEAMCLAW_GLM_API_KEY, TEAMCLAW_GROQ_API_KEY, "
+        "TEAMCLAW_CEREBRAS_API_KEY, TEAMCLAW_SILICONFLOW_API_KEY), or run "
+        "[bold]ollama serve[/bold] with qwen3:8b pulled for the local tier.\n"
+        "Run [bold]teamclaw doctor[/bold] to see what is reachable, and "
+        "[bold]teamclaw baseline[/bold] for the zero-model floor, which needs no "
+        f"provider at all. (Purposes needing a cloud tier: "
+        f"{', '.join(p.value for p in (Purpose.PLAN, Purpose.CODE, Purpose.JUDGE))}.)"
+    )
+    raise typer.Exit(2)
+
+
 # --- doctor ---------------------------------------------------------------
 @app.command()
 def doctor() -> None:
@@ -265,6 +297,7 @@ def eval(  # noqa: A001 - the command really is called eval
         raise typer.Exit(1)
 
     registry = build_registry(cfg, include_paid=config.allow_paid)
+    _require_usable_providers(registry, allow_paid=config.allow_paid)
     context = RunnerContext(
         registry=registry, client=SecClient(cfg=cfg),
         runs_root=cfg.paths.runs / arm, workspaces_root=cfg.paths.workspaces / arm,
@@ -314,6 +347,7 @@ def ablate(
     for config in selected:
         console.print(f"\n[bold]arm: {config.name}[/bold] — {config.description}")
         registry = build_registry(cfg, include_paid=config.allow_paid)
+        _require_usable_providers(registry, allow_paid=config.allow_paid)
         context = RunnerContext(
             registry=registry, client=SecClient(cfg=cfg),
             runs_root=cfg.paths.runs / config.name,
@@ -371,8 +405,10 @@ def run(
 
     config = ARMS_BY_NAME[arm]
     _, priors = _load_cases(level, None, held_out=case.held_out)
+    single_registry = build_registry(cfg, include_paid=config.allow_paid)
+    _require_usable_providers(single_registry, allow_paid=config.allow_paid)
     context = RunnerContext(
-        registry=build_registry(cfg, include_paid=config.allow_paid),
+        registry=single_registry,
         client=SecClient(cfg=cfg), runs_root=cfg.paths.runs / "single",
         workspaces_root=cfg.paths.workspaces / "single", arm=config, echo=True,
         prior_cases=priors,

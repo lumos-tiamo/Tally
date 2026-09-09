@@ -8,6 +8,7 @@ from teamclaw.context.compactor import Compactor
 from teamclaw.context.slots import Item
 from teamclaw.context.tokenizer import count_tokens
 from teamclaw.evaluation.harness import CaseOutcome, EvalRun
+from teamclaw.evaluation.metrics import RunMetrics
 from teamclaw.orchestration.graph import CyclicGraph, TaskGraph, UnknownDependency
 from teamclaw.orchestration.subagent import DelegationDepthExceeded, SubAgentFactory
 
@@ -171,11 +172,31 @@ def test_a_run_served_by_a_fake_provider_is_not_a_measurement():
 
 def test_a_run_served_by_real_providers_is_publishable():
     run = EvalRun(arm="full", level="l1")
-    run.outcomes.append(CaseOutcome(case_id="X-FY2024", level="l1", finished=True,
-                                    providers_used=("gemini",)))
+    run.outcomes.append(CaseOutcome(
+        case_id="X-FY2024", level="l1", finished=True, providers_used=("gemini",),
+        run=RunMetrics(steps=3, tokens_in=1_200, tokens_out=180),
+    ))
     assert run.publishable
     assert run.headline()["validity_note"] == ""
 
 
+def test_a_real_provider_that_consumed_no_tokens_is_not_publishable():
+    """Attribution alone is not evidence that work happened.
+
+    A case can name a provider and still have consumed nothing — every call
+    failed before reaching it. That produces a table of zeros which reads exactly
+    like a genuine score of zero, so token consumption is required as well.
+    """
+    run = EvalRun(arm="full", level="l1")
+    run.outcomes.append(CaseOutcome(
+        case_id="X-FY2024", level="l1", finished=False, providers_used=("gemini",),
+        run=RunMetrics(), error="NoProviderAvailable: none configured",
+    ))
+    assert not run.publishable
+    assert "no model tokens were consumed" in run.headline()["validity_note"]
+
+
 def test_an_empty_run_is_not_publishable():
-    assert not EvalRun(arm="full", level="l1").publishable
+    run = EvalRun(arm="full", level="l1")
+    assert not run.publishable
+    assert run.invalidity_reason() == "no cases were run"

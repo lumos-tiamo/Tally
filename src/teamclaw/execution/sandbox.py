@@ -5,6 +5,14 @@ Two backends behind one interface:
 ``DockerSandbox``
     The real thing: no network by default, read-only dataset mount, read-write
     workspace mount, cpu/memory/pid caps, dropped capabilities, non-root user.
+
+    One environmental constraint is enforced rather than assumed. Docker Desktop
+    shares only a configured set of host paths — ``/Users`` typically, ``/var/folders``
+    typically not — and a bind mount from an unshared path does not fail. It
+    silently becomes an *empty directory*, so the step script vanishes and the
+    error surfaces as ``can't find '__main__' module``, which reads like a bug in
+    the agent's code. :meth:`DockerSandbox.mount_works` probes the actual
+    workspace path with a sentinel before the backend is chosen.
 ``LocalSandbox``
     A subprocess fallback for machines with no Docker daemon (this project was
     built on one). It is *honestly weaker*: it restricts the interpreter's
@@ -41,6 +49,12 @@ from typing import Protocol, Sequence
 from teamclaw.observability.trace import SpanKind, Tracer
 
 DEFAULT_IMAGE = "teamclaw-sandbox:latest"
+
+# Mount-probe results, keyed by (image, resolved workspace path). Whether a host
+# path is shared with the Docker VM cannot change during a run, and the probe
+# costs a container start — so caching it at module level keeps a test suite of
+# ten container tests from paying for ten probes.
+_MOUNT_PROBE_CACHE: dict[tuple[str, str], bool] = {}
 
 # Modules the local fallback refuses to let agent code import. This is a
 # defence-in-depth measure for the weak backend, not a security boundary: a
@@ -81,6 +95,21 @@ class ExecResult:
         }
 
 
+def newest_mtime(root: Path) -> float:
+    """Most recent mtime anywhere under ``root``, or 0.0 if empty/unreadable."""
+    newest = 0.0
+    try:
+        for dirpath, _dirnames, filenames in os.walk(root):
+            for name in filenames:
+                try:
+                    newest = max(newest, os.stat(os.path.join(dirpath, name)).st_mtime)
+                except OSError:
+                    continue
+    except OSError:
+        return newest
+    return newest
+
+
 @dataclass
 class SandboxLimits:
     wall_clock_s: float = 120.0
@@ -89,6 +118,13 @@ class SandboxLimits:
     pids: int = 128
     max_stdout_chars: int = 20_000
     network: bool = False
+    # How long to wait for a container's writes to become visible on the host.
+    # Docker Desktop's shared filesystem propagates guest writes with a short
+    # delay, so reading the workspace the instant the container exits can miss
+    # the artefacts the step just produced — and the agent then builds its next
+    # context believing it wrote nothing. Bounded, and skipped entirely when
+    # evidence of a write has already appeared.
+    settle_ms: int = 1_500
 
 
 class Sandbox(Protocol):
@@ -123,8 +159,10 @@ def wrap_code(code: str, *, tools_path: str | None, rpc_dir: str | None) -> str:
 
 
 def shift_traceback_lines(text: str, offset: int = PREAMBLE_LINES) -> str:
-    """Rewrite ``step.py``, line N -> N-offset so reported lines match agent code.
+    """Rewrite reported line numbers so they match the agent's own code.
 
+    Covers both delivery forms: the local backend runs a ``step.py`` file, the
+    container backend reads the program from stdin and reports ``<stdin>``.
     Without this the agent is told the error is on line 8 of code whose line 8 is
     something else, and the convergence loop's "fix line 8" feedback sends it to
     the wrong place.
@@ -136,7 +174,7 @@ def shift_traceback_lines(text: str, offset: int = PREAMBLE_LINES) -> str:
         n = int(match.group(2))
         return f"{match.group(1)}{max(1, n - offset)}"
 
-    return re.sub(r"(step\.py\", line )(\d+)", _fix, text)
+    return re.sub(r"((?:step\.py|<stdin>)\", line )(\d+)", _fix, text)
 
 
 def _truncate(text: str, cap: int) -> tuple[str, bool]:
@@ -169,6 +207,7 @@ class DockerSandbox:
         self.limits = limits or SandboxLimits()
         self.allow_hosts = tuple(allow_hosts)
         self.tracer = tracer
+        self._mount_ok: bool | None = None
 
     def isolation_level(self) -> str:
         return "container" if not self.limits.network else "container+egress"
@@ -195,7 +234,7 @@ class DockerSandbox:
             return False
         return proc.returncode == 0
 
-    def _argv(self, script_host_path: Path) -> list[str]:
+    def _argv(self) -> list[str]:
         argv = [
             "docker", "run", "--rm",
             "--user", "1000:1000",
@@ -209,52 +248,121 @@ class DockerSandbox:
             "--pids-limit", str(self.limits.pids),
             "--network", "none" if not self.limits.network else "bridge",
             "-v", f"{self.workspace.resolve()}:/workspace:rw",
-            "-v", f"{script_host_path.resolve()}:/run/step.py:ro",
             "-w", "/workspace",
             "-e", "PYTHONDONTWRITEBYTECODE=1",
             "-e", "PYTHONUNBUFFERED=1",
             "-e", "HOME=/tmp",
+            "-i",  # keep stdin open: the program is delivered through it
         ]
         if self.datasets is not None:
             argv += ["-v", f"{self.datasets.resolve()}:/datasets:ro"]
         if self.tools_dir is not None:
             argv += ["-v", f"{self.tools_dir.resolve()}:/opt/tools:ro",
                      "-e", "PYTHONPATH=/opt/tools"]
-        argv += [self.image, "python", "-I", "/run/step.py"]
+        # ``-`` reads the program from stdin. Two earlier approaches both failed
+        # on Docker Desktop's shared filesystem: mounting the script from a temp
+        # directory hit the unshared-path problem, and writing it into the
+        # workspace hit a propagation race — the container starts before the
+        # host's write is visible in the guest, so roughly half the runs died
+        # with "can't open file". stdin is delivered over the daemon socket and
+        # depends on no filesystem at all.
+        argv += [self.image, "python", "-I", "-"]
         return argv
+
+    MOUNT_PROBE_ATTEMPTS = 3
+
+    def mount_works(self) -> bool:
+        """Probe that a bind mount of this workspace is actually visible inside.
+
+        Retried, and the retries are the substance rather than defensiveness.
+        Docker Desktop's shared filesystem propagates host writes to the guest
+        with a short delay, so a single-shot probe fails intermittently on a path
+        that is perfectly shareable — which is exactly the flakiness this method
+        exists to eliminate. A path that is genuinely unshared never appears, no
+        matter how long you wait, so a couple of retries separate "slow" from
+        "never" cleanly.
+
+        The result is cached per (image, path) at module level: the answer cannot
+        change during a run, and each attempt costs a container start.
+        """
+        key = (self.image, str(self.workspace.resolve()))
+        if key in _MOUNT_PROBE_CACHE:
+            return _MOUNT_PROBE_CACHE[key]
+
+        self.workspace.mkdir(parents=True, exist_ok=True)
+        sentinel = self.workspace / ".teamclaw-mount-probe"
+        sentinel.write_text("probe", encoding="utf-8")
+        ok = False
+        try:
+            for attempt in range(self.MOUNT_PROBE_ATTEMPTS):
+                if attempt:
+                    time.sleep(0.4 * attempt)
+                try:
+                    proc = subprocess.run(
+                        ["docker", "run", "--rm", "--network", "none",
+                         "-v", f"{self.workspace.resolve()}:/probe:ro",
+                         self.image, "cat", "/probe/.teamclaw-mount-probe"],
+                        capture_output=True, text=True, timeout=45,
+                    )
+                except (subprocess.SubprocessError, OSError):
+                    break
+                if proc.returncode == 0 and "probe" in proc.stdout:
+                    ok = True
+                    break
+        finally:
+            sentinel.unlink(missing_ok=True)
+
+        _MOUNT_PROBE_CACHE[key] = ok
+        self._mount_ok = ok
+        return ok
+
+    def unavailable_reason(self) -> str:
+        """Why the container backend cannot be used, for the operator."""
+        if shutil.which("docker") is None:
+            return "the docker CLI is not on PATH"
+        if not self.available():
+            return "the docker daemon is not reachable"
+        if not self.image_present():
+            return (f"image {self.image} is absent — build it with "
+                    "`docker build -t teamclaw-sandbox:latest -f docker/Dockerfile.sandbox docker/`")
+        if not self.mount_works():
+            return (f"docker cannot bind-mount {self.workspace} — Docker Desktop "
+                    "shares only configured host paths, and an unshared path mounts "
+                    "as an empty directory. Move the workspace under a shared path "
+                    "(your home directory) or add this one in Docker Desktop's "
+                    "File Sharing settings.")
+        return ""
 
     def run(self, code: str, *, limits: SandboxLimits | None = None) -> ExecResult:
         lim = limits or self.limits
         started = time.time()
-        with tempfile.TemporaryDirectory() as tmp:
-            script = Path(tmp) / "step.py"
-            script.write_text(
-                wrap_code(
-                    code,
-                    tools_path="/opt/tools" if self.tools_dir else None,
-                    rpc_dir="/workspace/.rpc",
-                ),
-                encoding="utf-8",
+
+        self.workspace.mkdir(parents=True, exist_ok=True)
+        program = wrap_code(
+            code,
+            tools_path="/opt/tools" if self.tools_dir else None,
+            rpc_dir="/workspace/.rpc",
+        )
+
+        try:
+            proc = subprocess.run(
+                self._argv(), input=program,
+                capture_output=True, text=True, timeout=lim.wall_clock_s,
             )
-            try:
-                proc = subprocess.run(
-                    self._argv(script),
-                    capture_output=True, text=True, timeout=lim.wall_clock_s,
-                )
-                out, t1 = _truncate(proc.stdout, lim.max_stdout_chars)
-                err, t2 = _truncate(shift_traceback_lines(proc.stderr), lim.max_stdout_chars)
-                result = ExecResult(
-                    stdout=out, stderr=err, exit_code=proc.returncode,
-                    duration_s=time.time() - started, backend=self.backend,
-                    isolation=self.isolation_level(), truncated=t1 or t2,
-                )
-            except subprocess.TimeoutExpired:
-                result = ExecResult(
-                    stdout="", stderr=f"timed out after {lim.wall_clock_s}s",
-                    exit_code=124, duration_s=time.time() - started,
-                    timed_out=True, backend=self.backend,
-                    isolation=self.isolation_level(),
-                )
+            out, t1 = _truncate(proc.stdout, lim.max_stdout_chars)
+            err, t2 = _truncate(shift_traceback_lines(proc.stderr), lim.max_stdout_chars)
+            result = ExecResult(
+                stdout=out, stderr=err, exit_code=proc.returncode,
+                duration_s=time.time() - started, backend=self.backend,
+                isolation=self.isolation_level(), truncated=t1 or t2,
+            )
+        except subprocess.TimeoutExpired:
+            result = ExecResult(
+                stdout="", stderr=f"timed out after {lim.wall_clock_s}s",
+                exit_code=124, duration_s=time.time() - started,
+                timed_out=True, backend=self.backend,
+                isolation=self.isolation_level(),
+            )
         self._trace(result)
         return result
 
@@ -420,7 +528,7 @@ def build_sandbox(
             workspace=workspace, datasets=datasets, tools_dir=tools_dir,
             limits=limits or SandboxLimits(), tracer=tracer,
         )
-        if docker.available() and docker.image_present():
+        if docker.available() and docker.image_present() and docker.mount_works():
             return docker
     return LocalSandbox(
         workspace=workspace, tools_dir=tools_dir, datasets=datasets,

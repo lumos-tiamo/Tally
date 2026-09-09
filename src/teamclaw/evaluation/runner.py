@@ -115,8 +115,12 @@ def make_case_runner(ctx: RunnerContext) -> Callable[[GroundTruthCase, str], Cas
         run_id = new_run_id()
         run_dir = ctx.runs_root / f"{ctx.arm.name}__{case.case_id}__{run_id}"
         tracer = Tracer(run_id, run_dir, echo=ctx.echo)
-        workspace = Workspace.create(ctx.workspaces_root, f"{ctx.arm.name}__{case.case_id}")
-        workspace.clear()
+        # A distinct path per run, never a cleared-and-reused one: see
+        # Workspace.clear(). It also keeps each case's artefacts for inspection,
+        # which matters when an arm's score needs explaining.
+        workspace = Workspace.create(
+            ctx.workspaces_root, f"{ctx.arm.name}__{case.case_id}__{run_id}"
+        )
 
         accountant = Accountant(sink=run_dir / "usage.jsonl")
         router = Router(

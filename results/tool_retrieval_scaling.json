@@ -1,0 +1,54 @@
+{
+ "measurement": "tool-representation cost vs registry size",
+ "step_description": "extract the total revenue figure from the income statement of the filing",
+ "retrieval_k": 8,
+ "model_calls": 0,
+ "note": "Registry sizes above 17 are synthetic tools shaped like real ones. Retrieval cost is flat in registry size because k is fixed; both alternatives grow linearly.",
+ "rows": [
+  {
+   "tools": 17,
+   "retrieved_signatures": 188,
+   "retrieved_tool_count": 5,
+   "all_signatures": 536,
+   "full_json_schemas": 1456,
+   "saving_vs_all_signatures_pct": 64.9,
+   "saving_vs_schemas_pct": 87.1
+  },
+  {
+   "tools": 40,
+   "retrieved_signatures": 188,
+   "retrieved_tool_count": 5,
+   "all_signatures": 1442,
+   "full_json_schemas": 4992,
+   "saving_vs_all_signatures_pct": 87.0,
+   "saving_vs_schemas_pct": 96.2
+  },
+  {
+   "tools": 80,
+   "retrieved_signatures": 188,
+   "retrieved_tool_count": 5,
+   "all_signatures": 2892,
+   "full_json_schemas": 11140,
+   "saving_vs_all_signatures_pct": 93.5,
+   "saving_vs_schemas_pct": 98.3
+  },
+  {
+   "tools": 160,
+   "retrieved_signatures": 188,
+   "retrieved_tool_count": 5,
+   "all_signatures": 5816,
+   "full_json_schemas": 23471,
+   "saving_vs_all_signatures_pct": 96.8,
+   "saving_vs_schemas_pct": 99.2
+  },
+  {
+   "tools": 320,
+   "retrieved_signatures": 188,
+   "retrieved_tool_count": 5,
+   "all_signatures": 11705,
+   "full_json_schemas": 48195,
+   "saving_vs_all_signatures_pct": 98.4,
+   "saving_vs_schemas_pct": 99.6
+  }
+ ]
+}

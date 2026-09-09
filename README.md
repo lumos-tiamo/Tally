@@ -74,14 +74,62 @@ metric suite discriminates by difficulty as intended:
 | | Tokens |
 |---|---|
 | One 10-K, whole, in the prompt | **61,206** |
-| Tool signatures a step actually receives (5 of 17 tools, retrieval-filtered) | **188** |
+| Tool signatures a step actually receives (5 of 17, retrieval-filtered) | **188** |
 | All 17 tool signatures, no retrieval | 536 |
 | All 17 tools as MCP JSON schemas | 1,456 |
 | Tool stub sources (on disk, never in a prompt) | 6,739 |
 
 A single filing exceeds a 32k window by itself, which is why the workspace holds
-documents and the prompt holds digests. And publishing schemas rather than
-signatures would cost **1,456 tokens per step instead of 188 — 87% more**.
+documents and the prompt holds digests.
+
+**Retrieval cost is flat in registry size; both alternatives are linear.** At 17
+tools the saving is real but modest, and reporting only that would understate the
+mechanism — an agent wired to a few MCP servers has hundreds of tools.
+`scripts/tool_retrieval_scaling.py` measures the same quantity as the registry
+grows (sizes above 17 are synthetic tools shaped like real ones):
+
+| Tools | Retrieved (k=8) | All signatures | All schemas | Saving vs schemas |
+|---|---|---|---|---|
+| 17 | **188** | 536 | 1,456 | 87.1% |
+| 40 | **188** | 1,442 | 4,992 | 96.2% |
+| 80 | **188** | 2,892 | 11,140 | 98.3% |
+| 160 | **188** | 5,816 | 23,471 | 99.2% |
+| 320 | **188** | 11,705 | 48,195 | 99.6% |
+
+At 320 tools, publishing schemas costs **48,195 tokens — more than a 32k window
+holds at all**. That is the argument for compiling tools into an importable
+package rather than injecting their schemas.
+
+### Arm context cost — measured, and honestly bounded
+
+An arm differs from `full` in two separable ways: how much context it spends and
+how accurate it is. The second needs a model; the first does not.
+`scripts/arm_context_cost.py` drives an identical 16-step trajectory through
+every arm across a window sweep.
+
+At a 6,000-token window, where the budget actually binds:
+
+| Arm | Mean tokens/step | Evicted | Compactions | vs full |
+|---|---|---|---|---|
+| `full` | 2,891 | 0 | 2 | — |
+| `minus-compaction` | 3,345 | **597** | 0 | **+15.7%** |
+| `minus-tool-retrieval` | 2,920 | 0 | 2 | +1.0% |
+| `minus-memory` | 2,545 | 0 | 2 | −12.0% |
+
+**Compaction prevents eviction**: without it the run spends 15.7% more context
+per step *and* still loses 597 tokens to eviction. The effect disappears above a
+12k window — the mechanism is inert when the budget is roomy, and the sweep is
+there to show where the crossover is.
+
+**What this measurement cannot show, stated plainly.** `minus-ledger` differs
+from `full` by 0.1% in every configuration tested. The ledger's guarantee is a
+*worst-case* property — hard floors and pinning stop retrieved memory from
+evicting the operating contract — and it binds only when the requested content
+genuinely exceeds the budget, which this trajectory never quite reaches. It is
+demonstrated by a targeted test
+(`test_retrieved_memory_cannot_evict_the_system_prompt`), not by a token saving,
+and manufacturing a scenario to produce a flattering number here would be
+dishonest. Its accuracy effect remains unmeasured until a model is wired up.
 
 ### Platform-abstraction cost — measured
 
@@ -164,10 +212,26 @@ and reached through a file-based RPC in the one directory both sides share, so
 the host broker is a single chokepoint where every outbound call is authorised
 and logged to `.rpc/audit.jsonl`.
 
-Two backends, and a result always records which one produced it: Docker
-(`--network none`, read-only rootfs, dropped capabilities, non-root, cpu/memory/
-pid caps) or a subprocess fallback with rlimits and a static import check. The
-fallback is *honestly weaker* and labelled `process-rlimits-only`.
+Two backends, and a result always records which one produced it. The container
+backend's properties are verified rather than asserted — `tests/test_docker_sandbox.py`
+checks all ten against a live daemon and skips cleanly when one is absent:
+
+| Property | Verified |
+|---|---|
+| Runs as non-root | uid 1000 |
+| Network unreachable | kernel refuses the connection — not a static check |
+| Root filesystem read-only | write to `/etc` raises |
+| Workspace writable, visible on host | round-trips |
+| Packages cannot be installed | `pip install` returns non-zero |
+| Memory cap | 3 GB allocation killed (exit 137) |
+| Wall clock | infinite loop killed (exit 124) |
+| Host bridge from a network-free container | tool call reaches the host |
+| Traceback line numbers | match the agent's own code exactly |
+| Unshared mount path | detected, with an actionable reason |
+
+The subprocess fallback is *honestly weaker* — it shares the host kernel and
+filesystem namespace — and labels itself `process-rlimits-only` so any result
+produced under it carries that fact.
 
 ### The context ledger
 
@@ -314,6 +378,28 @@ named regression test:
   importable through the environment. The bootstrap is one line, deliberately,
   because every preamble line shifts the traceback line numbers the convergence
   loop quotes back.
+- **Docker Desktop shares only configured host paths, and an unshared bind mount
+  does not fail — it becomes an empty directory.** The step script vanishes and
+  the error surfaces as `can't find '__main__' module`, which reads like a bug in
+  the agent's code. `/Users` is shared; `/var/folders` — where `mktemp` and
+  pytest's `tmp_path` live on macOS — is not. There is now a mount probe, and a
+  fallback that says why.
+- **The shared filesystem propagates in both directions with a delay**, measured
+  at up to **1.1 s**. That showed up twice. Writing the step script into the
+  workspace and immediately starting the container failed about half the time, so
+  the program is delivered over stdin instead and depends on no filesystem at
+  all. And artefacts a container writes are not instantly visible to the host, so
+  a step could finish and the agent read a workspace digest that omitted what it
+  had just produced — the container backend now waits, briefly and boundedly, for
+  evidence of the write.
+- **A path the host deletes cannot always be recreated by the container.** The
+  guest caches directory entries, so clearing a workspace host-side and then
+  writing the same filename from inside the sandbox can fail with a
+  `FileNotFoundError` on a *write*. Two wrong diagnoses preceded the right one —
+  first the mount inode, then the propagation delay — and it was narrowing it to
+  *the same filename* that identified it. Every run now gets its own workspace
+  path instead of clearing and reusing one, which removes the interaction rather
+  than working around it, and keeps each case's artefacts for inspection.
 
 ---
 
@@ -335,7 +421,10 @@ src/teamclaw/
     code_engineer/    repo edits verified by the test suite
 docker/Dockerfile.sandbox
 scripts/deterministic_baseline.py
-tests/                151 tests, no network, no credentials
+scripts/arm_context_cost.py
+scripts/tool_retrieval_scaling.py
+results/               measured output, committed
+tests/                 162 tests — 151 offline, 11 container-gated
 docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```
 
@@ -344,7 +433,7 @@ docs/superpowers/specs/2026-09-09-agent-platform-design.md
 ```bash
 uv venv --python 3.13 && uv pip install -e ".[dev]"
 cp .env.example .env          # set TEAMCLAW_SEC_USER_AGENT at minimum
-python -m pytest -q           # 151 tests, offline
+python -m pytest -q           # 151 offline; 11 more if a sandbox image exists
 teamclaw doctor
 ```
 

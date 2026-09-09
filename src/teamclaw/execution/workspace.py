@@ -243,6 +243,16 @@ class Workspace:
         }
 
     def clear(self) -> None:
+        """Empty the workspace in place.
+
+        Prefer a fresh workspace path over clearing and reusing one when a
+        container sandbox is in play. Docker Desktop's shared filesystem caches
+        directory entries in the guest, so a file the *host* deletes and the
+        *container* then recreates at the same path can fail to open — the guest
+        is still holding the stale entry. Distinct paths per run avoid the whole
+        class of problem, cost nothing, and leave the previous run's artefacts
+        available for inspection.
+        """
         if self.root.exists():
             shutil.rmtree(self.root)
         self.root.mkdir(parents=True, exist_ok=True)

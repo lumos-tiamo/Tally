@@ -45,18 +45,26 @@ from teamclaw.observability.accounting import Accountant
 from teamclaw.observability.trace import SpanKind, Tracer
 
 # Purpose -> ordered provider preference. Names must exist in the registry.
+# ``ollama`` appears last on the reasoning purposes rather than not at all. It is
+# not a good planner at 8B, and the ordering says so — but a machine with no
+# cloud credentials and a local daemon is the *actual* zero-cost configuration,
+# and a policy that omits it there fails every case with NoProviderAvailable
+# instead of running slowly. Degraded and running beats correct and unusable; the
+# arm's conditions record which provider served the work either way.
 DEFAULT_POLICY: dict[Purpose, tuple[str, ...]] = {
-    Purpose.PLAN: ("gemini", "glm", "cerebras", "groq", "siliconflow"),
-    Purpose.DECIDE: ("gemini", "glm", "cerebras", "groq", "siliconflow"),
-    Purpose.CODE: ("gemini", "glm", "cerebras", "groq", "siliconflow"),
-    Purpose.REFLECT: ("gemini", "glm", "groq", "siliconflow"),
+    Purpose.PLAN: ("gemini", "glm", "cerebras", "groq", "siliconflow", "ollama"),
+    Purpose.DECIDE: ("gemini", "glm", "cerebras", "groq", "siliconflow", "ollama"),
+    Purpose.CODE: ("gemini", "glm", "cerebras", "groq", "siliconflow", "ollama"),
+    Purpose.REFLECT: ("gemini", "glm", "groq", "siliconflow", "ollama"),
     Purpose.SUMMARIZE: ("glm", "gemini", "ollama", "groq"),
     # Local first: these are high-volume, low-difficulty calls. Sending them to a
     # free cloud tier would burn the daily request budget that PLAN needs.
     Purpose.EXTRACT: ("ollama", "glm", "gemini"),
     Purpose.CLASSIFY: ("ollama", "glm", "gemini"),
     Purpose.REWRITE: ("ollama", "glm", "gemini"),
-    # The judge must not be the actor, otherwise the eval grades its own work.
+    # The judge must not be the actor, otherwise the eval grades its own work — so
+    # a local-only setup deliberately has no judge. An eval that cannot grade
+    # independently should fail loudly rather than let one model score itself.
     Purpose.JUDGE: ("gemini", "glm", "cerebras"),
 }
 

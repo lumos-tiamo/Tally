@@ -232,13 +232,13 @@ end-to-end through the same `Agent` class.
 
 | Scenario | AgentSpec | Tools | Total | Runtime changes |
 |---|---|---|---|---|
-| `dd_finance` (deep) | 1,689 | 467 | 2,156 | **0** |
+| `dd_finance` (deep) | 1,937 | 467 | 2,404 | **0** |
 | `bi_analyst` | 136 | 104 | 240 | **0** |
 | `deep_research` | 166 | 140 | 306 | **0** |
 | `code_engineer` | 158 | 162 | 320 | **0** |
 
-Light scenarios: **mean 289 lines, range 240–320, zero runtime changes.** The
-platform runtime is 5,603 lines; the eval harness 1,103; the tests 1,535.
+Light scenarios: **mean 288 lines, range 240–320, zero runtime changes.** The
+platform runtime is 5,673 lines; the eval harness 1,608; the tests 2,078.
 
 The four scenarios are deliberately *heterogeneous*, because a platform running
 one scenario is an application with a plugin folder:
@@ -417,9 +417,18 @@ place:
 
 | Purpose | Routed to |
 |---|---|
-| plan / decide / code / reflect | free cloud tiers (Gemini Flash, GLM-Flash, Groq, Cerebras) |
-| extract / classify / rewrite | local Qwen3-8B via Ollama |
-| judge | a pool disjoint from the actor's — a model must not grade its own work |
+| plan / decide / code / reflect | free cloud tiers (Gemini Flash, GLM-Flash, Groq, Cerebras), then local as last resort |
+| extract / classify / rewrite | local Qwen3-8B via Ollama, first |
+| judge | cloud only — a model must not grade its own work |
+
+The local tier is *last* on the reasoning purposes and *first* on extraction,
+which encodes that an 8B model is a workable fallback planner and a perfectly
+good extractor. It is on those lists at all because a machine with no cloud
+credentials and a running Ollama is the genuine zero-cost configuration, and a
+policy that omitted it there would fail every case with `NoProviderAvailable`
+rather than run slowly. Judging stays cloud-only on purpose: a local-only setup
+would otherwise have the actor grade its own output, and an eval that cannot
+grade independently should fail loudly instead.
 
 High-volume, low-difficulty calls go local *specifically* so they do not burn the
 daily request budget that planning needs. Beyond that: quota tracked in sliding

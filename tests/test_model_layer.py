@@ -89,13 +89,36 @@ def test_high_volume_purposes_route_to_local_before_the_scarce_free_tier():
     assert DEFAULT_POLICY[Purpose.PLAN][0] != "ollama"
 
 
-def test_the_judge_pool_is_disjoint_from_the_actor_pool_at_the_top():
-    """A model must not grade its own work."""
+def test_a_local_only_machine_can_serve_every_purpose_except_judging():
+    """The actual zero-cost configuration has to work, not just be describable.
+
+    A machine with no cloud credentials and a running Ollama is the real
+    zero-budget setup. A policy that omitted the local provider from the
+    reasoning purposes would fail every case with NoProviderAvailable rather
+    than run slowly, so the local tier is last on those lists rather than absent.
+
+    Judging is the deliberate exception: it stays cloud-only, because a local-only
+    setup would otherwise have the actor grade its own output, and an eval that
+    cannot grade independently should fail loudly instead.
+    """
+    local = FakeProvider(name="ollama", model="qwen3:8b")
+    router = Router(Registry(providers={"ollama": local}))
+    for purpose in Purpose:
+        ranked = router._rank(purpose, allow_paid=False)
+        if purpose is Purpose.JUDGE:
+            assert ranked == [], "a local model must not be allowed to judge"
+        else:
+            assert ranked == ["ollama"], f"{purpose.value} is unreachable locally"
+
+
+def test_the_local_tier_is_last_resort_for_reasoning_and_first_for_extraction():
+    """Ordering encodes that an 8B model is a fallback planner, not a good one."""
     from teamclaw.models.router import DEFAULT_POLICY
 
-    assert DEFAULT_POLICY[Purpose.JUDGE][0] != DEFAULT_POLICY[Purpose.CODE][0] or True
-    # The real guarantee is that JUDGE has its own policy entry at all.
-    assert Purpose.JUDGE in DEFAULT_POLICY
+    assert DEFAULT_POLICY[Purpose.PLAN][-1] == "ollama"
+    assert DEFAULT_POLICY[Purpose.CODE][-1] == "ollama"
+    assert DEFAULT_POLICY[Purpose.EXTRACT][0] == "ollama"
+    assert "ollama" not in DEFAULT_POLICY[Purpose.JUDGE]
 
 
 # --- quota ----------------------------------------------------------------

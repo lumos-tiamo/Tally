@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tally 工作底稿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root{
+    --paper:#E9EDE6;
+    --sheet:#F7F9F5;
+    --ink:#1B2220;
+    --muted:#5D6A61;
+    --faint:#8A968C;
+    --rule:#C6CFC1;
+    --hair:#D8DFD3;
+    --accent:#7A2E21;
+    --accent-wash:#F0E2DD;
+    --verify:#2F5D4A;
+    --verify-wash:#DCE7DF;
+    --shadow:rgba(27,34,32,.10);
+
+    --f-display:"Noto Serif SC",Songti SC,SimSun,Georgia,serif;
+    --f-body:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+    --s0:.75rem; --s1:.8125rem; --s2:.9375rem; --s3:1rem;
+    --s4:1.1875rem; --s5:1.5rem; --s6:2rem; --s7:2.875rem;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#141814;
+      --sheet:#1B211C;
+      --ink:#E4E9E0;
+      --muted:#9CA89D;
+      --faint:#77837A;
+      --rule:#39443A;
+      --hair:#2A322B;
+      --accent:#D9917C;
+      --accent-wash:#2B1E1A;
+      --verify:#79C0A1;
+      --verify-wash:#1B2A23;
+      --shadow:rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#141814;
+    --sheet:#1B211C;
+    --ink:#E4E9E0;
+    --muted:#9CA89D;
+    --faint:#77837A;
+    --rule:#39443A;
+    --hair:#2A322B;
+    --accent:#D9917C;
+    --accent-wash:#2B1E1A;
+    --verify:#79C0A1;
+    --verify-wash:#1B2A23;
+    --shadow:rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--f-body);
+    font-size:var(--s2);
+    line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+    padding:clamp(1rem,4vw,3.5rem) clamp(.75rem,4vw,2rem) 4rem;
+  }
+  .sheet{
+    max-width:60rem;
+    margin:0 auto;
+    background:var(--sheet);
+    border:1px solid var(--rule);
+    box-shadow:0 1px 0 var(--hair), 0 18px 40px -30px var(--shadow);
+  }
+  .pad{padding:clamp(1.25rem,4vw,3.25rem)}
+
+  h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;font-weight:700;letter-spacing:.01em}
+  p{margin:0}
+  a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule)}
+  a:hover{border-bottom-color:var(--accent);color:var(--accent)}
+  a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  .eyebrow{
+    font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .stack{display:flex;flex-direction:column}
+  .g-1{gap:.375rem} .g-2{gap:.75rem} .g-3{gap:1.125rem}
+  .g-4{gap:1.75rem} .g-5{gap:2.5rem} .g-6{gap:3.25rem}
+
+  /* ---------- masthead ---------- */
+  header.masthead{
+    border-bottom:2px solid var(--ink);
+    padding:clamp(1.25rem,4vw,3.25rem) clamp(1.25rem,4vw,3.25rem) 1.5rem;
+  }
+  .title-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem 1rem}
+  h1{font-size:var(--s7);line-height:1.05;letter-spacing:.06em}
+  .title-cn{font-family:var(--f-display);font-size:var(--s4);color:var(--muted);font-weight:500}
+  .thesis{
+    font-family:var(--f-display);font-size:var(--s5);line-height:1.5;
+    max-width:34ch;font-weight:500;
+  }
+  .thesis em{font-style:normal;border-bottom:2px solid var(--accent);color:var(--accent)}
+
+  .meta{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+    border-top:1px solid var(--hair);
+  }
+  .meta > div{
+    padding:.875rem 1rem .875rem 0;
+    border-right:1px solid var(--hair);
+  }
+  .meta > div:last-child{border-right:0}
+  .meta dt{font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.1em;color:var(--faint);margin-bottom:.25rem}
+  .meta dd{margin:0;font-size:var(--s1);line-height:1.6}
+  .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+  /* ---------- generic section ---------- */
+  section{border-top:1px solid var(--rule)}
+  .sec-head{display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem}
+  .sec-head h2{font-size:var(--s5);line-height:1.3}
+  .sec-no{font-family:var(--f-mono);font-size:var(--s0);color:var(--faint);letter-spacing:.14em}
+  .lede{max-width:62ch;color:var(--ink)}
+  .lede.muted{color:var(--muted)}
+
+  /* ---------- chips ---------- */
+  .chips{display:flex;flex-wrap:wrap;gap:.375rem}
+  .chip{
+    font-family:var(--f-mono);font-size:var(--s0);line-height:1.5;
+    padding:.1875rem .5rem;border:1px solid var(--hair);border-radius:2px;color:var(--muted);
+  }
+  .stamp{
+    display:inline-flex;align-items:center;gap:.4375rem;
+    font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.1em;text-transform:uppercase;
+    padding:.25rem .5625rem;border:1px solid currentColor;border-radius:2px;
+  }
+  .stamp.ok{color:var(--verify);background:var(--verify-wash)}
+  .stamp.no{color:var(--accent);background:var(--accent-wash)}
+  .stamp.todo{color:var(--faint)}
+
+  /* ---------- ledger table ---------- */
+  .scroller{overflow-x:auto;border:1px solid var(--hair);background:var(--sheet)}
+  table{border-collapse:collapse;width:100%;min-width:34rem;font-size:var(--s1)}
+  caption{
+    text-align:left;padding:.75rem .875rem;border-bottom:1px solid var(--rule);
+    font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.08em;color:var(--muted);
+    display:flex;flex-wrap:wrap;gap:.5rem .75rem;align-items:center;
+  }
+  th,td{padding:.625rem .875rem;text-align:left;vertical-align:top;border-bottom:1px solid var(--hair)}
+  thead th{
+    font-family:var(--f-mono);font-weight:400;font-size:var(--s0);letter-spacing:.1em;
+    color:var(--faint);text-transform:uppercase;border-bottom:1px solid var(--rule);
+  }
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--paper) 45%,transparent)}
+  td.val{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.val b{font-weight:700}
+  td code, td .id{font-family:var(--f-mono);font-size:var(--s0)}
+
+  /* ---------- charts ---------- */
+  .figures{display:grid;gap:1.75rem}
+  figure{margin:0;border:1px solid var(--hair);padding:1rem 1rem .75rem;background:var(--sheet)}
+  figure .fig-title{font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.1em;color:var(--muted);margin-bottom:.75rem}
+  figure svg{display:block;width:100%;height:auto;overflow:visible}
+  figcaption{font-size:var(--s1);color:var(--muted);margin-top:.625rem;max-width:62ch}
+  .ax{fill:var(--faint);font-family:"JetBrains Mono",monospace;font-size:11px}
+  .lbl{fill:var(--ink);font-family:"Noto Sans SC",sans-serif;font-size:12px}
+  .lbl-inv{fill:var(--sheet);font-family:"Noto Sans SC",sans-serif;font-size:12px}
+  .bar-solid{fill:var(--verify)}
+  .bar-over{fill:var(--accent)}
+  .bar-open{fill:var(--hair)}
+  .bar-sub{fill:var(--accent)}
+  .gridline{stroke:var(--hair);stroke-width:1}
+  .threshold{stroke:var(--ink);stroke-width:1;stroke-dasharray:4 3}
+  .axisline{stroke:var(--rule);stroke-width:1}
+
+  /* ---------- mermaid diagrams ---------- */
+  .diagram{
+    margin:0;border:1px solid var(--hair);background:var(--sheet);
+    padding:1rem .75rem .75rem;
+  }
+  .diagram .fig-title{font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.1em;color:var(--muted);margin:0 .25rem .75rem}
+  .diagram .canvas{overflow-x:auto;padding:.25rem}
+  .diagram pre.mermaid{margin:0;background:none;border:0;text-align:center;min-width:24rem}
+  .diagram figcaption{font-size:var(--s1);color:var(--muted);margin:.75rem .25rem 0;max-width:62ch}
+
+  /* ---------- register (13 implementations) ---------- */
+  .register{display:flex;flex-direction:column}
+  .entry{
+    display:grid;grid-template-columns:3rem 1fr;gap:0 1.25rem;
+    padding:1.5rem 0;border-top:1px solid var(--hair);
+  }
+  .entry:first-child{border-top:0;padding-top:0}
+  .entry-no{
+    font-family:var(--f-mono);font-size:var(--s2);color:var(--accent);
+    font-variant-numeric:tabular-nums;padding-top:.1875rem;
+  }
+  .entry h3{font-size:var(--s4);line-height:1.45;margin-bottom:.625rem}
+  .entry .body{display:flex;flex-direction:column;gap:.625rem;max-width:64ch}
+  .entry p{color:var(--muted)}
+  .entry strong{color:var(--ink);font-weight:700}
+  .entry code{font-family:var(--f-mono);font-size:.9em;color:var(--ink)}
+  .fact{
+    display:grid;grid-template-columns:auto 1fr;gap:.5rem .75rem;align-items:start;
+    border-left:2px solid var(--verify);padding:.5rem 0 .5rem .75rem;background:var(--verify-wash);
+  }
+  .fact .k{font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.1em;color:var(--verify);text-transform:uppercase;padding-top:.1875rem}
+  .fact .v{font-size:var(--s1);color:var(--ink)}
+  .fact .v b{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+  .assert{
+    font-family:var(--f-display);font-size:var(--s3);line-height:1.6;
+    border-left:2px solid var(--rule);padding-left:.875rem;color:var(--ink);
+  }
+
+  .orig{
+    border-left:2px solid var(--rule);padding:.5rem 0 .5rem .875rem;
+    display:grid;gap:.375rem;
+  }
+  .orig .tag{
+    font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);
+  }
+  .orig .txt{font-family:var(--f-display);font-size:var(--s2);line-height:1.7;color:var(--ink)}
+  .harden{display:flex;flex-direction:column;gap:.625rem}
+
+
+  /* ---------- paste-ready resume block ---------- */
+  .cv{
+    border:1px solid var(--rule);background:var(--sheet);
+    padding:clamp(1rem,3vw,1.5rem);display:flex;flex-direction:column;gap:.875rem;
+  }
+  .cv-head{
+    display:flex;flex-wrap:wrap;align-items:baseline;gap:.375rem .75rem;
+    border-bottom:1px solid var(--ink);padding-bottom:.5rem;
+  }
+  .cv-head .name{font-family:var(--f-display);font-size:var(--s4);font-weight:700}
+  .cv-head .date{font-family:var(--f-mono);font-size:var(--s1);color:var(--muted);margin-left:auto}
+  .cv-row{display:grid;grid-template-columns:5.25rem 1fr;gap:.25rem .75rem;align-items:start}
+  .cv-row > dt{
+    font-family:var(--f-mono);font-size:var(--s0);letter-spacing:.08em;color:var(--faint);
+    padding-top:.25rem;
+  }
+  .cv-row > dd{margin:0;font-size:var(--s2);line-height:1.8}
+  .cv ol{margin:0;padding-left:1.5rem;display:flex;flex-direction:column;gap:.5rem}
+  .cv li{font-size:var(--s2);line-height:1.8}
+  .cv li b{font-weight:700}
+  .cv .num{font-weight:700}
+  .wc{
+    display:inline-flex;align-items:baseline;gap:.375rem;font-family:var(--f-mono);
+    font-size:var(--s0);letter-spacing:.08em;color:var(--verify);
+    border:1px solid currentColor;background:var(--verify-wash);
+    border-radius:2px;padding:.1875rem .5rem;
+  }
+  .wc.long{color:var(--muted);background:transparent}
+  @media (max-width:34rem){ .cv-row{grid-template-columns:1fr} .cv-row > dt{padding-top:.5rem} }
+
+  /* ---------- unmeasured inset ---------- */
+  .inset{
+    border:1px solid var(--accent);background:var(--accent-wash);
+    padding:clamp(1rem,3vw,1.75rem);position:relative;
+  }
+  .inset .rubber{
+    font-family:var(--f-mono);font-size:var(--s1);letter-spacing:.14em;font-weight:700;
+    color:var(--accent);border:2px solid var(--accent);border-radius:3px;
+    padding:.3125rem .625rem;display:inline-block;transform:rotate(-2.5deg);
+    margin-bottom:1rem;
+  }
+  .inset ul{margin:0;padding-left:1.125rem;display:flex;flex-direction:column;gap:.625rem}
+  .inset li{color:var(--ink)}
+  .inset li strong{font-weight:700}
+  .quote-line{
+    font-family:var(--f-display);font-size:var(--s3);line-height:1.7;
+    border-top:1px solid var(--accent);padding-top:1rem;margin-top:1.25rem;
+  }
+
+  /* ---------- pull quotes ---------- */
+  .lines{display:flex;flex-direction:column;gap:1.75rem}
+  .line{display:grid;grid-template-columns:3rem 1fr;gap:0 1.25rem}
+  .line .mark{font-family:var(--f-mono);color:var(--accent);font-size:var(--s2);padding-top:.375rem}
+  .line blockquote{
+    margin:0 0 .5rem;font-family:var(--f-display);font-size:var(--s4);
+    line-height:1.55;font-weight:500;max-width:40ch;
+  }
+  .line p{color:var(--muted);font-size:var(--s1);max-width:60ch}
+
+  /* ---------- footer ---------- */
+  footer{border-top:2px solid var(--ink);padding:1.5rem clamp(1.25rem,4vw,3.25rem) 2rem;color:var(--muted);font-size:var(--s1)}
+  .todo-note{
+    display:flex;gap:.75rem;align-items:flex-start;flex-wrap:wrap;
+    border:1px dashed var(--rule);padding:.75rem .875rem;
+  }
+  .ph{
+    font-family:var(--f-mono);font-size:var(--s0);color:var(--accent);
+    background:var(--accent-wash);border:1px dashed var(--accent);border-radius:2px;padding:.0625rem .375rem;
+  }
+
+  @media (max-width:34rem){
+    .entry,.line{grid-template-columns:1fr;gap:.5rem}
+    .entry-no,.line .mark{padding-top:0}
+    .meta > div{border-right:0;border-bottom:1px solid var(--hair)}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media print{
+    body{background:#fff;padding:0}
+    .sheet{border:0;box-shadow:none;max-width:none}
+    .entry{break-inside:avoid}
+  }
+</style>
+<style>
+  :root { color-scheme: light dark; }
+  html, body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+  .diagram .mermaid svg { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<article class="sheet">
+
+  <header class="masthead stack g-4">
+    <div class="stack g-2">
+      <p class="eyebrow">项目经历 · AI 全栈工程师 / Agent 开发工程师</p>
+      <div class="title-row">
+        <h1>TeamClaw</h1>
+        <span class="title-cn">多 Agent 数字员工协作平台</span>
+      </div>
+    </div>
+
+    <p class="thesis">面向企业团队智能协作的 Agent 系统,<br>推进到<em>可被测量</em>的形态。</p>
+
+    <p class="lede muted" style="max-width:58ch">
+      这一页有三层:<strong style="color:var(--ink)">纸面上的简历正文</strong>(两个长度,A 版对齐原版字数)、
+      被追问时的<strong style="color:var(--ink)">口头展开版</strong>,以及支撑每一句话的
+      <strong style="color:var(--ink)">实测台账</strong>。简历短,底子厚。
+    </p>
+
+    <dl class="meta">
+      <div>
+        <dt>起止时间</dt>
+        <dd>2026.05 – 2026.06</dd>
+      </div>
+      <div>
+        <dt>开源版本</dt>
+        <dd><a href="https://github.com/lumos-tiamo/Tally">github.com/lumos-tiamo/Tally</a></dd>
+      </div>
+      <div>
+        <dt>工程规模</dt>
+        <dd><span class="num">16,801</span> 行 · <span class="num">130</span> 个文件</dd>
+      </div>
+      <div>
+        <dt>测试</dt>
+        <dd><span class="num">284</span> 项(<span class="num">273</span> 离线 + <span class="num">11</span> 容器)</dd>
+      </div>
+    </dl>
+
+    <div class="chips" aria-label="技术栈">
+      <span class="chip">Code Execution Sandbox / Docker</span>
+      <span class="chip">Context Engineering</span>
+      <span class="chip">MCP</span>
+      <span class="chip">Skill</span>
+      <span class="chip">分层 Memory</span>
+      <span class="chip">A2A</span>
+      <span class="chip">FastAPI</span>
+      <span class="chip">WebSocket</span>
+      <span class="chip">Redis</span>
+      <span class="chip">SQLAlchemy</span>
+      <span class="chip">BM25 检索</span>
+      <span class="chip">Ollama 本地推理</span>
+      <span class="chip">Python 3.13</span>
+      <span class="chip">pytest</span>
+    </div>
+
+    <p class="lede muted" style="font-size:var(--s1)">
+      执行层已由 <strong style="color:var(--ink)">Function Calling</strong> 迁移至
+      <strong style="color:var(--ink)">Code Execution</strong> —— 理由见核心实现 05。
+    </p>
+  </header>
+
+  <!-- ================= A 版 ================= -->
+  <section class="pad stack g-4">
+    <div class="stack g-2">
+      <div class="sec-head">
+        <span class="sec-no">A</span>
+        <h2>简历正文 · A 版</h2>
+        <span class="wc">≈ 594 字 · 原版 540</span>
+      </div>
+      <p class="lede">
+        四条核心实现的<strong>题目与主语全部沿用原版</strong>,每条只加一个从句。
+        长度对齐原版,直接替换即可。
+      </p>
+    </div>
+
+    <div class="cv">
+      <div class="cv-head">
+        <span class="name">TeamClaw 多 Agent 数字员工平台</span>
+        <span class="date">2026.05 – 2026.06</span>
+      </div>
+
+      <dl class="cv-row">
+        <dt>项目背景</dt>
+        <dd>面向企业团队智能协作的多 Agent 数字员工平台,Agent 具备持久记忆、独立工作空间、工具调用、任务触发与 A2A 协作能力,支撑 AI 员工的创建管理与多渠道接入。</dd>
+      </dl>
+      <dl class="cv-row">
+        <dt>技术栈</dt>
+        <dd>Code Execution、Context Engineering、MCP、Skill、分层 Memory、A2A、Docker、FastAPI、WebSocket、Redis</dd>
+      </dl>
+      <dl class="cv-row">
+        <dt>核心实现</dt>
+        <dd>
+          <ol>
+            <li><b>Agent Memory 设计</b>:分层记忆上下文体系,人格 / 长期记忆 / 任务焦点 / 会话历史按硬下限 + 弹性竞价分配预算并每步重建 Prompt,保证检索记忆永不挤出人格与操作契约。</li>
+            <li><b>Agent MCP 设计</b>:MCP 动态工具接入与运行时绑定;工具编译为可 import 的 Python 模块而非注入 schema —— 每步签名 <span class="num">188</span> tokens,320 工具全量 schema 需 <span class="num">48,195</span> tokens。</li>
+            <li><b>Skill 设计</b>:SKILL.md 指令包沉淀可复用能力,支持技能索引与按需读取;命中用 IDF 覆盖率双阈值门控,上下文吃紧时先丢正文保索引。</li>
+            <li><b>A2A 协作设计</b>:关系表校验的 Agent 间委托与文件传递;权限函数不接受租户参数、缺失即拒绝;子 Agent 独立工作区,父级只回收摘要与产物路径。</li>
+          </ol>
+        </dd>
+      </dl>
+      <dl class="cv-row">
+        <dt>个人贡献</dt>
+        <dd>负责 Agent 后端核心能力开发,重点实现 Memory 上下文注入、MCP 工具扩展、Skill 能力管理与 A2A 协作链路,并主导执行基底迁移与评测体系建设。</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ================= B 版 ================= -->
+  <section class="pad stack g-4">
+    <div class="stack g-2">
+      <div class="sec-head">
+        <span class="sec-no">B</span>
+        <h2>简历正文 · B 版</h2>
+        <span class="wc long">≈ 725 字 · 多两行</span>
+      </div>
+      <p class="lede">
+        版面还有余量时用。差异只有三处:背景多半句、四条各加一个从句、
+        <strong>第 5 条是新增的评测体系</strong> —— 这条是整份经历里最难被别人复制的部分。
+      </p>
+    </div>
+
+    <div class="cv">
+      <div class="cv-head">
+        <span class="name">TeamClaw 多 Agent 数字员工平台</span>
+        <span class="date">2026.05 – 2026.06</span>
+      </div>
+
+      <dl class="cv-row">
+        <dt>项目背景</dt>
+        <dd>面向企业团队智能协作的多 Agent 数字员工平台,Agent 具备持久记忆、独立工作空间、工具调用、任务触发与 A2A 协作能力,支撑 AI 员工的创建管理、多渠道接入与协同办公。</dd>
+      </dl>
+      <dl class="cv-row">
+        <dt>技术栈</dt>
+        <dd>Code Execution、Context Engineering、MCP、Skill、分层 Memory、A2A、Docker、FastAPI、WebSocket、Redis</dd>
+      </dl>
+      <dl class="cv-row">
+        <dt>核心实现</dt>
+        <dd>
+          <ol>
+            <li><b>Agent Memory 设计</b>:分层记忆上下文体系:人格、长期记忆、任务焦点与会话历史按硬下限 + 弹性系数竞价分配预算、每步重建 Prompt,保证检索记忆永不挤出人格与操作契约;冲突按置信度优先而非后写胜解决。</li>
+            <li><b>Agent MCP 设计</b>:MCP 动态工具接入与按 Agent 粒度运行时绑定;工具编译为可 import 的 Python 模块而非注入 schema —— 每步签名恒定 <span class="num">188</span> tokens,320 工具全量 schema 需 <span class="num">48,195</span> tokens。</li>
+            <li><b>Skill 设计</b>:SKILL.md 指令包沉淀可复用任务能力,支持技能索引、按需读取与自定义导入;命中用 IDF 覆盖率双阈值门控,上下文吃紧时先丢正文保索引。</li>
+            <li><b>A2A 协作设计</b>:关系表校验的 Agent 间任务委托与文件传递;权限函数不接受租户参数、缺失即拒绝、租户是行上的列而非请求字段;子 Agent 独立工作区,父级只回收摘要与产物路径。</li>
+            <li><b>执行基底与评测</b>:Agent 唯一动作是在断网 Docker 沙箱内写 Python,工作区即 checkpoint;基于 SEC XBRL 构造 <span class="num">177</span> 案例真值集,固化 workflow 实测存在 <span class="num">0.738</span> 硬天花板、<span class="num">26.2</span> 点结构不可达。</li>
+          </ol>
+        </dd>
+      </dl>
+      <dl class="cv-row">
+        <dt>个人贡献</dt>
+        <dd>同 A 版。</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ================= 系统一览 ================= -->
+  <section class="pad stack g-4">
+    <div class="stack g-2">
+      <div class="sec-head">
+        <span class="sec-no">C</span>
+        <h2>一个 step 的生命周期</h2>
+        <span class="stamp ok">工作区即 checkpoint</span>
+      </div>
+      <p class="lede">
+        整个平台可以由一张图说完:<strong>Agent 唯一的动作是在沙箱里写 Python</strong>。
+        上下文不是追加出来的,而是每一步按槽位竞价<strong>重建</strong>出来的;
+        产物落在磁盘上,只有 Agent 主动 print 的部分回流进下一步。
+      </p>
+    </div>
+
+    <figure class="diagram">
+      <p class="fig-title">图 0 · 执行回路(Code Execution + Context Ledger + 收敛循环)</p>
+      <div class="canvas">
+<pre class="mermaid">
+flowchart LR
+  OBJ["目标 + 工作区当前状态"] --> LED{"Context Ledger<br/>六槽位竞价"}
+  LED --> PRM["重建 prompt<br/>而非追加"]
+  PRM --> GEN["模型输出 Python"]
+  GEN --> BOX["沙箱执行<br/>network none / 只读根 / 非 root"]
+  BOX --> ART["产物落盘<br/>仅 stdout 回流上下文"]
+  ART --> STEP{"step 边界"}
+  STEP -->|"占用超 70%"| CMP["压缩<br/>不缩短则中止"]
+  STEP -->|"写入"| MEM["分层 Memory<br/>带 trace 溯源"]
+  CMP --> LED
+  MEM --> LED
+  BOX -.->|"失败"| CVG["错误收敛<br/>按错误类别去重"]
+  CVG -.->|"同类 x2"| UP["升级更强模型"]
+  CVG -.->|"同类 x3"| HUM["转人工,之后中止"]
+  UP --> LED
+</pre>
+      </div>
+      <figcaption>
+        三条设计后果都出自「仅 stdout 回流」这一个决策:上下文增长由 Agent 的输出选择决定而非数据体量;
+        第 40 步可以读第 3 步的产物;崩溃恢复是重读工作区而不是重放对话。
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ================= 实测台账 ================= -->
+  <section class="pad stack g-4">
+    <div class="stack g-2">
+      <div class="sec-head">
+        <span class="sec-no">D</span>
+        <h2>实测台账</h2>
+        <span class="stamp ok">deterministic · 不依赖模型</span>
+      </div>
+      <p class="lede">
+        下表全部是<strong>不依赖模型的测量</strong> —— 这是刻意的:它们不会因为换一个模型而失效。
+        数据来自本仓库可复现产物 <code class="num">results/</code> 与
+        <code class="num">data/datasets/*.summary.json</code>。
+      </p>
+    </div>
+
+    <div class="scroller">
+      <table>
+        <caption>
+          <span>台账 A · 模型无关量</span>
+          <span class="stamp ok">11 / 11 可复现</span>
+        </caption>
+        <thead>
+          <tr><th scope="col">主张</th><th scope="col">实测值</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>真值集规模与质量</td><td class="val"><b>177</b> 案例 · 0 隔离 · 0 错误 · 恒等式 <b>177/177</b>,相对误差 <b>0.0</b></td></tr>
+          <tr><td>零模型地板线(135 案例)</td><td class="val">数值 <b>0.571</b> / 引用 <b>0.985</b> / 拒答 <b>0.964</b></td></tr>
+          <tr><td>单份 10-K 上下文成本</td><td class="val"><b>61,206</b> tokens(超 32k 窗口)</td></tr>
+          <tr><td>每步工具签名成本</td><td class="val"><b>188</b> tokens,与注册表规模无关</td></tr>
+          <tr><td>320 工具时的全量 schema 成本</td><td class="val"><b>48,195</b> tokens —— 超出整个 32k 窗口</td></tr>
+          <tr><td>移除压缩机制(6k 窗口)</td><td class="val">每步 <b>+15.7%</b>,额外驱逐 <b>597</b> tokens</td></tr>
+          <tr><td>固化 Workflow 的结构天花板</td><td class="val"><b>0.738</b>,<b>26.2</b> 个百分点不可达</td></tr>
+          <tr><td>L3 判断层真值</td><td class="val"><b>118</b> 年度对 / <b>126</b> 信号 / <b>39%</b> 零信号案例</td></tr>
+          <tr><td>新场景接入成本</td><td class="val">平均 <b>288</b> 行,runtime 改动 <b>0</b> 行</td></tr>
+          <tr><td>容器隔离</td><td class="val"><b>10</b> 项属性逐条对活跃 daemon 验证</td></tr>
+          <tr><td>测试规模</td><td class="val"><b>284</b> 项(<b>273</b> 离线 + <b>11</b> 容器条件)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="figures">
+
+    <figure class="diagram">
+      <p class="fig-title">图 A · 测量架构 —— 为什么这些数字算得上证据</p>
+      <div class="canvas">
+<pre class="mermaid">
+flowchart TB
+  GT["SEC XBRL 真值集<br/>177 案例 / 恒等式 177 比 177"] --> H["同一个 Harness"]
+  TL["同一套工具"] --> H
+  MT["同一套四类指标<br/>数值 / 引用 / 计算 / 拒答"] --> H
+  H --> A1["Agent 组<br/>模型决定下一步"]
+  H --> A2["workflow-c 组<br/>代码决定下一步"]
+  H --> A3["strong-naked 组<br/>不给平台"]
+  A1 --> GUARD{"measurement_kind 守卫"}
+  A2 --> GUARD
+  A3 --> GUARD
+  GUARD -->|"无替身 且 有真实 token 消耗"| OK["可发布"]
+  GUARD -->|"测试替身 或 零消耗"| NO["NOT A MEASUREMENT"]
+</pre>
+      </div>
+      <figcaption>
+        三组只在「由谁决定下一步」上不同 —— 语料、工具、指标、harness 完全共享。
+        这是自主性对比成为<strong style="color:var(--ink)">测量</strong>而不是争论的唯一原因。
+      </figcaption>
+    </figure>
+
+
+      <figure>
+        <p class="fig-title">图 1 · 工具接入成本 vs 32k 上下文窗口</p>
+        <svg viewBox="0 0 720 236" role="img" aria-label="柱状图:工具编译加检索门控每步 188 tokens;320 个工具的全量 JSON schema 为 48,195 tokens,远超 32,000 的窗口上限">
+          <line class="gridline" x1="24" y1="20" x2="24" y2="188"></line>
+          <line class="threshold" x1="473" y1="20" x2="473" y2="188"></line>
+
+          <text class="lbl" x="24" y="34">工具编译 + 检索门控(k=8)</text>
+          <rect class="bar-solid" x="24" y="42" width="3" height="26"></rect>
+          <text class="ax" x="36" y="60">188 tokens ← 与注册表规模无关</text>
+
+          <text class="lbl" x="24" y="114">全量 JSON schema 注入 · 320 个工具</text>
+          <rect class="bar-over" x="24" y="122" width="676" height="26"></rect>
+          <text class="lbl-inv" x="36" y="140">48,195 tokens</text>
+
+          <line class="axisline" x1="24" y1="188" x2="700" y2="188"></line>
+          <text class="ax" x="24" y="206" text-anchor="start">0</text>
+          <text class="ax" x="248" y="206" text-anchor="middle">16k</text>
+          <text class="ax" x="473" y="206" text-anchor="middle">32k</text>
+          <text class="ax" x="473" y="222" text-anchor="middle">窗口上限</text>
+          <text class="ax" x="700" y="206" text-anchor="end">48,195</text>
+        </svg>
+        <figcaption>
+          全量 schema 在 320 个工具规模上单独就吃掉整个窗口;检索门控方案每步实付固定 188 tokens。
+          这是「工具编译为可 import 模块」相对 schema 注入的硬理由,而不是偏好。
+        </figcaption>
+      </figure>
+
+      <figure>
+        <p class="fig-title">图 2 · 固化 Workflow 对照组的 1,620 个字段槽</p>
+        <svg viewBox="0 0 720 152" role="img" aria-label="堆叠条形图:1620 个字段槽中代码解决 1216 个占 75.1%,交给模型节点 404 个,其中 230 个真值确实存在">
+          <text class="lbl" x="24" y="32">代码解决 1,216(75.1%)</text>
+          <text class="lbl" x="536" y="32">交给模型 404</text>
+          <rect class="bar-solid" x="24" y="40" width="507" height="34"></rect>
+          <rect class="bar-open" x="531" y="40" width="169" height="34"></rect>
+          <line class="gridline" x1="531" y1="40" x2="531" y2="112"></line>
+
+          <rect class="bar-sub" x="531" y="86" width="96" height="12"></rect>
+          <text class="ax" x="531" y="116">└ 其中真值确实存在 230(可争取上限)</text>
+
+          <line class="axisline" x1="24" y1="132" x2="700" y2="132"></line>
+          <text class="ax" x="24" y="148" text-anchor="start">0</text>
+          <text class="ax" x="700" y="148" text-anchor="end">1,620 槽</text>
+        </svg>
+        <figcaption>
+          由此该组存在 <span class="num">0.738</span> 的硬天花板,且 <span class="num">26.2</span> 个百分点在结构上不可达 ——
+          模型节点只在「未答出」时触发,因此一个被自信答错的字段永不被复查。
+          <strong style="color:var(--ink)">固化管道能修补遗漏,修不了错误。</strong>
+        </figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ================= 核心实现 ================= -->
+  <section class="pad stack g-4">
+    <div class="sec-head">
+      <span class="sec-no">E</span>
+      <h2>口头展开版</h2>
+      <span class="sec-no">被追问时讲的深度 · 不写进简历</span>
+    </div>
+
+    <div class="register">
+
+      <div class="entry">
+        <div class="entry-no">01</div>
+        <div class="body">
+          <h3>Agent Memory 设计</h3>
+          <div class="harden">
+            <p>把「动态注入」做成<strong>槽位竞价式预算分配</strong>:六个槽位在 <code>窗口 − 输出预留 − 安全余量</code> 内按硬下限 + 弹性系数 + 目标份额竞价,每步<strong>重建</strong> prompt 而非追加,余量优先流向<strong>最不弹性</strong>的槽位 —— 这两条规则共同保证检索记忆永不挤出角色人格与操作契约,该失效模式有专门回归测试。</p>
+            <p>记忆冲突由显式 <code>ConflictPolicy</code> 解决,<strong>默认置信度优先而非后写胜</strong> —— 后写胜会让一次幻觉抽取摧毁已验证的事实,这个默认值是被一次 0.3 置信度覆盖 0.95 置信度事实的真实故障改出来的。记忆层有独立的 precision@k / recall@k。</p>
+            <p>压缩<strong>仅在 step 边界</strong>且占用 &gt;70% 时触发(中途压缩会打断推理链),且在压缩不会实际缩短时中止。每次构造产出可审计的 <code>LedgerRecord</code>(各槽位配额 / 占用 / 淘汰项及原因)。</p>
+            <div class="fact"><span class="k">实测</span><span class="v">6k 窗口下移除压缩机制使每步 token <b>+15.7%</b> 且额外驱逐 <b>597</b> tokens;该效应在 12k 窗口以上消失 —— 机制的临界点由窗口扫描测出,而非假设。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-no">02</div>
+        <div class="body">
+          <h3>Agent MCP 设计</h3>
+          <div class="harden">
+            <p>工具表示由「注入 JSON schema」改为 <code>tools/list</code> → <strong>Python 模块编译</strong>链路(必需参数排序、标识符净化),Agent 在沙箱内 <code>import</code> 并通过 <code>help()</code> 按需发现细节。</p>
+            <p>工具选择由<strong>双阈值检索门控</strong>决定:IDF 加权覆盖率 + 绝对信息量,并配停用词表 —— 小语料下 IDF 无法自行折扣停用词。</p>
+            <div class="fact"><span class="k">实测</span><span class="v">每步实付工具签名 <b>188</b> tokens,且<strong>与注册表规模无关</strong>;同规模全量 JSON schema 在 320 个工具时达 <b>48,195</b> tokens —— 已超出整个 32k 窗口。这是工具编译方案相对 schema 注入的硬理由。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-no">03</div>
+        <div class="body">
+          <h3>Skill 设计</h3>
+          <div class="harden">
+            <p>技能命中改用与工具同一套 IDF 覆盖率门控:原先的 BM25 分数阈值在小语料下会把「礼貌问候用户」判为相关技能 —— 分数尺度本身不可比,阈值因此没有含义。</p>
+            <p>上下文吃紧时技能槽<strong>先丢正文保索引</strong>而非整体丢弃,Agent 仍然知道自己有哪些技能、可以再取。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-no">04</div>
+        <div class="body">
+          <h3>A2A 协作设计</h3>
+          <div class="harden">
+            <p>权限模型收敛为<strong>一个不接受租户参数的函数</strong> <code>may_delegate(source_id, target_id, *, need_files)</code>:缺失即拒绝(无默认放行、无通配)、<strong>租户是关系行上的列而非请求里的字段</strong>(调用方无法靠声明租户来授权跨租户委托)、授权有方向、文件传输是独立权限、自委托最先被拒,拒绝原因指明具体条件。</p>
+            <p>子 Agent 派生的目的不是并行,而是<strong>父级不必持有子级工作上下文</strong>:子级获得全新 ledger、空历史与独立工作区子树;父级只回收摘要与产物路径、<strong>永不回收子级 transcript</strong>;文件经共享工作区交接。成本按 Agent 维度独立归属,可回答「哪个子 Agent 烧掉了额度」。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-no">05</div>
+        <div class="body">
+          <h3>Code Execution 执行基底(替代 Function Calling)</h3>
+          <div class="harden">
+            <p>把 Agent 的唯一动作改为「在沙箱内写 Python」:工具是可 <code>import</code> 的模块而非 JSON schema,中间产物落盘、<strong>仅 stdout 回流上下文</strong>。该单一决策同时解决三件事 —— 上下文增长受「Agent 主动选择输出的内容」约束而非数据体量;第 40 步可读第 3 步的产物;崩溃恢复是重读工作区而非重放对话(<strong>工作区即 checkpoint</strong>)。</p>
+            <p>小模型写错代码是常态,故收敛循环按<strong>错误类别</strong>而非消息文本识别重复(<code>name 'df' is not defined</code> 与 <code>name 'tbl' …</code> 是同一误解的重复,不是两个错误)。反馈含异常类型、从 Agent 自身代码引回的失败行,以及<strong>被误用模块的真实签名重新注入</strong>;升级有界:同类两次 → 更强模型,三次 → 人工,之后中止。</p>
+            <div class="fact"><span class="k">实测</span><span class="v">单份 10-K 全文 <b>61,206</b> tokens,已超出 32k 窗口 —— 这是该设计的前提,而非事后解释。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-no">06</div>
+        <div class="body">
+          <h3>生产化沙箱、服务层与运行观测台(全栈)</h3>
+          <div class="harden">
+            <p>沙箱双后端(Docker <code>--network none</code> / 进程受限兜底),<strong>结果强制记录自身隔离级别</strong>;容器 <strong>10 项隔离属性由测试对活跃 daemon 逐条验证</strong>:非 root、内核级断网、只读根文件系统、内存 OOM、墙钟、禁止装包、traceback 行号对齐等。无网络沙箱经<strong>文件 RPC 桥</strong>调用宿主工具,使宿主 broker 成为唯一可审计的出网收口。</p>
+            <p>服务层 FastAPI <strong>28 个端点 + 每 run 一条 WebSocket</strong>;读开放、写操作过 token、渠道 webhook 走平台签名。SQLAlchemy 持久化 Agent 声明、A2A 关系、会话与运行记录 —— <strong>运行记录只是索引,不复制产物</strong>。Redis 会话层带<strong>诚实的内存兜底</strong>并明示降级原因与多 worker 风险。</p>
+            <p>渠道接入(飞书)的<strong>验签与幂等由路由统一强制</strong>,适配器无法遗漏 —— 任何渠道都会在 200 慢响应时重投,而 Agent 运行天然慢,没有去重就会同一条消息起两个 run。同步 Agent 循环与异步 API 用有界线程池 + 每 run 事件队列桥接,取消是协作式的并明确告知在下一个步边界生效。</p>
+            <p>前端是<strong>运行观测台</strong>而非管理后台:核心是每步 token 槽位分配的实时可视化 —— 把「槽位竞价 + 硬下限」从一句话变成可以指着看的图。无构建步骤、无框架。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-no">07</div>
+        <div class="body">
+          <h3>评测体系与自主性量化对照(项目信誉所在)</h3>
+          <div class="harden">
+            <p>基于 SEC XBRL <strong>半自动构造真值集</strong> —— 这是 177 案例规模可行、人工标注只能到几十条的原因。映射层解决四类真实数据陷阱:一字段多标签、<code>fy</code> 标注的是<strong>填报年度</strong>而非事实年度、季度区间事实与年度同形、重述导致同期双值。</p>
+            <p>四类自动指标各自捕捉其余三者看不见的失效:数值准确率(三档容差,区分舍入与胡说)、<strong>引用可验证率</strong>(数字对但引文不在原文 = 猜的)、<strong>计算一致性</strong>、<strong>拒答正确性</strong>。judge 报告自身 <strong>Cohen's κ 校准</strong>,低于 0.6 的维度从 headline 撤出 —— 一个与人类不一致的 judge 不构成对 Agent 的证据。</p>
+            <p>Harness 只在「无测试替身」<strong>且</strong>「确有真实模型 token 消耗」时才认定为测量,否则显式标注 <code>NOT A MEASUREMENT</code>。这条守卫的每一半都源于真实发生过的失败:scripted provider 拿到 <span class="num">1.000</span> 满分仍被拒绝;无凭据运行输出一屏零却曾被标记为有效。</p>
+            <p>另实现固化 DAG 对照组,与 Agent 组<strong>共享同一套语料、工具、指标与 harness</strong>,仅「由谁决定下一步」不同 —— 这使自主性对比成为测量而非争论。</p>
+            <p class="assert">接入新场景只允许新增 <code>AgentSpec</code> + 工具模块,不允许修改 runtime 任何一行 —— 由 AST 检查与三场景端到端测试强制。实测新场景平均 <b>288</b> 行、runtime 改动 <b>0</b> 行。</p>
+            <div class="fact"><span class="k">实测</span><span class="v">真值集 177 案例、<b>0</b> 隔离 <b>0</b> 错误、资产负债表恒等式 <b>177/177</b> 通过且相对误差 <b>0.0</b>;零模型地板线数值 <b>0.571</b> / 引用 <b>0.985</b> / 拒答 <b>0.964</b>;固化管道存在 <b>0.738</b> 的硬天花板、<b>26.2</b> 个百分点结构不可达 —— <strong>固化管道能修补遗漏,修不了错误</strong>。</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="todo-note">
+      <p style="color:var(--muted);font-size:var(--s1);max-width:62ch;margin:0">
+        <strong style="color:var(--ink)">个人贡献</strong>:负责 Agent 后端核心能力开发,重点实现
+        <strong style="color:var(--ink)">Memory 上下文注入(槽位竞价预算与冲突策略)、MCP 工具扩展
+        (模块编译与检索门控)、Skill 能力管理、A2A 协作链路与权限模型</strong>,并主导执行基底由
+        Function Calling 迁移至 Code Execution、沙箱隔离与服务层落地,以及真值集与评测体系建设 ——
+        提升 Agent 的持续工作、工具扩展和多智能体协同能力,并使平台的每项能力主张都有可复现的实测支撑。
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 尚未测量 ================= -->
+  <section class="pad stack g-4">
+    <div class="sec-head">
+      <span class="sec-no">F</span>
+      <h2>尚未测量的数字</h2>
+      <span class="stamp no">禁止写入简历</span>
+    </div>
+
+    <div class="inset">
+      <p class="rubber">NOT A MEASUREMENT</p>
+      <ul>
+        <li><strong>8 组消融的准确率对比</strong>,含 <code>strong-naked</code> 组的「架构贡献 vs 模型贡献」。已实现、可运行、<strong>未跑</strong>。</li>
+        <li><strong>LLM-judge 与人工标注的 κ 一致率</strong>。需要 judge 模型 + 人工标注集。</li>
+        <li><strong>端到端准确率</strong>。目前只有:gemini-2.5-flash 单案例 <span class="num">9/12</span>(<strong>n=1</strong>),以及 deepseek-v4-flash 三案例全部撞上 14 步上限、未产出交付物(<strong>n=3,得分 0</strong>)。<strong>两者都不构成结论</strong> —— 把 n=1 的好数字写进简历,恰恰是这个项目本身在反对的事。</li>
+      </ul>
+      <p class="quote-line">
+        <strong>面试可以主动说这一段。</strong>「我有一个 <span class="num">0.750</span> 和三个 <span class="num">0.000</span>,
+        所以我把消融组报为未测,而不是引用那个好看的数字」—— 这句话比任何一个数字都更能证明工程判断。
+      </p>
+    </div>
+
+    <p class="lede muted">
+      <strong style="color:var(--ink)">要产出这些数字</strong>:配一个 key 后 <code>tally ablate --level l1 --workers 4</code>。
+      实测单案例约 <span class="num">44.4</span> 万 tokens / <span class="num">362</span> 秒 / <span class="num">$0.21</span>(gemini-flash),
+      因此 7 组 × 30 案例约 <span class="num">$11</span> 与 <span class="num">5</span> 小时 —— 成本与时间都是真实约束,这也是它尚未跑的原因。
+    </p>
+  </section>
+
+  <!-- ================= 面试追问 ================= -->
+  <section class="pad stack g-4">
+    <div class="sec-head">
+      <span class="sec-no">G</span>
+      <h2>面试追问 → 答案在哪</h2>
+    </div>
+
+    <div class="scroller">
+      <table>
+        <caption><span>每一条追问都指向仓库里的一个具体位置</span></caption>
+        <thead>
+          <tr><th scope="col">追问</th><th scope="col">位置</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>槽位竞价的权重怎么定的</td><td><code>context/slots.py</code> · <code>DEFAULT_POLICIES</code> + 6k 窗口消融数据</td></tr>
+          <tr><td>上下文满了裁剪谁</td><td>硬下限 + 弹性排序;<code>test_retrieved_memory_cannot_evict_the_system_prompt</code></td></tr>
+          <tr><td>记忆冲突怎么处理</td><td><code>context/memory.py</code> · <code>ConflictPolicy</code>,默认置信度优先而非后写胜</td></tr>
+          <tr><td>记忆召回准确率多少</td><td><code>recall_metrics</code>,记忆层有独立 precision@k / recall@k</td></tr>
+          <tr><td>小模型写错代码怎么办</td><td><code>execution/convergence.py</code>,按错误类别去重 + 三级有界升级</td></tr>
+          <tr><td>工具太多怎么办</td><td>检索双阈值门控 + 320 工具规模实测曲线</td></tr>
+          <tr><td>沙箱怎么保证安全</td><td><code>tests/test_docker_sandbox.py</code> 10 项属性逐条验证</td></tr>
+          <tr><td>真值集怎么保证对</td><td>XBRL 恒等式 177/177,四类数据陷阱见 <code>concepts.py</code> 文档</td></tr>
+          <tr><td>judge 可信吗</td><td><code>evaluation/judge.py</code> 报告 κ,低于 0.6 的维度从 headline 撤出</td></tr>
+          <tr><td>A2A 权限怎么设计</td><td><code>store/repository.py</code> · <code>may_delegate</code> —— 缺失即拒绝,租户来自行不来自请求</td></tr>
+          <tr><td>渠道重投递怎么处理</td><td>路由统一去重与验签,<code>tests/test_channels.py</code> 18 项</td></tr>
+          <tr><td>为什么要做固化 workflow 对照组</td><td>天花板分解:<code>results/workflow_c_gap_decomposition.json</code></td></tr>
+          <tr><td>成本怎么控</td><td>目的分级路由 + 配额主动避让 + 指纹缓存 + 按路由解析定价</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 三句话 ================= -->
+  <section class="pad stack g-4">
+    <div class="sec-head">
+      <span class="sec-no">H</span>
+      <h2>这个项目最该被记住的三句话</h2>
+    </div>
+
+    <div class="lines">
+      <div class="line">
+        <div class="mark">01</div>
+        <div>
+          <blockquote>「一个固化管道能修补它的遗漏,修不了它的错误。」</blockquote>
+          <p>由天花板分解量化:<span class="num">26.2</span> 个百分点在结构上不可达,因为模型节点只在未答出时触发。不需要模型即可确立。</p>
+        </div>
+      </div>
+      <div class="line">
+        <div class="mark">02</div>
+        <div>
+          <blockquote>「约束模型能碰什么,不等于约束它能错到什么程度。」</blockquote>
+          <p>我在文档里写下「模型只提供科目名,所以注入不了数字」,一个 stub 模型一次运行就证伪:同一个 caption 让七个字段拿到同一个真实数字、全部归属错误。声称被测试推翻,于是加了双重门控。</p>
+        </div>
+      </div>
+      <div class="line">
+        <div class="mark">03</div>
+        <div>
+          <blockquote>「记录错误的长度不是可观测性。」</blockquote>
+          <p>trace 原本只记 <code>stderr_chars</code>,导致第一次真实运行的五次沙箱失败<strong style="color:var(--ink)">完全无法诊断</strong> —— 在一个以可观测性为卖点的项目里。修复后同一案例从 <span class="num">0/12</span> 变成 <span class="num">9/12</span>。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="stack g-2">
+    <p>
+      数据来源:<code class="num">results/deterministic_baseline_l1.json</code> ·
+      <code class="num">results/tool_retrieval_scaling.json</code> ·
+      <code class="num">results/arm_context_cost.json</code> ·
+      <code class="num">results/workflow_c_l1.json</code> ·
+      <code class="num">results/workflow_c_gap_decomposition.json</code> ·
+      <code class="num">data/datasets/*.summary.json</code>
+    </p>
+    <p style="color:var(--faint);font-size:var(--s0);font-family:var(--f-mono)">
+      时间与个人贡献按原版填写;若在简历上附开源仓库链接,注意公开提交时间与项目起止时间需要一致的说法。
+    </p>
+  </footer>
+
+</article>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+  (function () {
+    if (typeof mermaid === "undefined") return;
+    var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var root = document.documentElement.getAttribute("data-theme");
+    if (root === "dark") dark = true;
+    if (root === "light") dark = false;
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: dark ? "dark" : "neutral",
+      flowchart: { curve: "basis", useMaxWidth: true },
+      themeVariables: { fontFamily: '"Noto Sans SC", system-ui, sans-serif',
+                         background: dark ? "#1B211C" : "#F7F9F5" }
+    });
+  })();
+</script>
+</body>
+</html>
